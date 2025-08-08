@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="row">
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-body photo-area">
+          <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="campus photo">
+          <p class="mt-2"><strong>{{ photo.caption or 'Campus Photo' }}</strong></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-5">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5>Click on the map to guess</h5>
+          <div id="map" style="height:400px;"></div>
+          <button id="submitGuess" class="btn btn-primary mt-2">Submit Guess</button>
+          <div id="resultArea" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const photoId = {{ photo.id }};
+    // initialize map
+    const map = L.map('map').setView(([52.994881, -2.267080], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let guessMarker = null;
+    let guessLatLng = null;
+
+    map.on('click', function(e){
+      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
+      guessMarker = L.marker(e.latlng).addTo(map).bindPopup("Your guess").openPopup();
+      guessLatLng = e.latlng;
+    });
+
+    document.getElementById('submitGuess').addEventListener('click', async () => {
+      if (!guessLatLng) { alert('Please click the map to place your guess'); return; }
+      const payload = { photo_id: photoId, lat: guessLatLng.lat, lng: guessLatLng.lng };
+      const resp = await fetch("{{ url_for('guess') }}", {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await resp.json();
+      if (j.error) { alert(j.error); return; }
+      // show true location and distance
+      const trueLatLng = [j.true_lat, j.true_lng];
+      L.marker(trueLatLng, {title:'True location'}).addTo(map).bindPopup("Actual location").openPopup();
+      map.fitBounds(L.latLngBounds([guessLatLng, trueLatLng]).pad(0.2));
+      document.getElementById('resultArea').innerHTML = `<div class="alert alert-info">Distance: ${j.distance_m} m — Points: ${j.points}</div>`;
+      // optionally show a play-again link
+      setTimeout(()=>{ window.location.href = "{{ url_for('play') }}"; }, 5000);
+    });
+  </script>
+{% endblock %}
+

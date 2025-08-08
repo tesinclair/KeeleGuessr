@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h3>Upload Campus Photo</h3>
+  <div class="row">
+    <div class="col-md-6">
+      <form method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label class="form-label">Photo</label>
+          <input class="form-control" type="file" name="photo" accept="image/*" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Caption (optional)</label>
+          <input class="form-control" name="caption">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Click map to set photo's true location</label>
+          <div id="map" style="height:300px;"></div>
+        </div>
+        <input type="hidden" name="lat" id="lat">
+        <input type="hidden" name="lng" id="lng">
+        <button class="btn btn-success" type="submit">Upload</button>
+      </form>
+    </div>
+    <div class="col-md-6">
+      <h5>Existing photos</h5>
+      <ul class="list-group">
+        {% for p in photos %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <img src="{{ url_for('uploaded_file', filename=p.filename) }}" style="height:40px; margin-right:8px;">
+              {{ p.caption or p.filename }}
+              <br><small>{{ p.lat }}, {{ p.lng }}</small>
+            </div>
+            <form method="post" action="{{ url_for('admin_delete', photo_id=p.id) }}" onsubmit="return confirm('Delete?')">
+              <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
+          </li>
+        {% else %}
+          <li class="list-group-item">No photos yet</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script>
+    // admin map for selecting coordinates
+    const map = L.map('map').setView([52.994881, -2.267080], 16); // change to campus center
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    let marker = null;
+    map.on('click', function(e){
+      if(marker) map.removeLayer(marker);
+      marker = L.marker(e.latlng).addTo(map);
+      document.getElementById('lat').value = e.latlng.lat;
+      document.getElementById('lng').value = e.latlng.lng;
+    });
+  </script>
+{% endblock %}
+
