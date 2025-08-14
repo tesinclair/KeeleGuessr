@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="create">
+    <h4>Create Account</h4>
+    <form method="post" autocomplete="off">
+      <input autocomplete="false" name="hidden" type="text" style="display:none;">
+      <div class="uname" id="uname-div">
+        <input id="uname" class="create-input" name="username" required>
+      </div>
+      <div class="pword" id="pword-div"> 
+        <input id="pword" class="create-input" name="password" type="password" required>
+      </div>
+      <div class="pword-again" id="pword-again-div">
+        <input id="pword-again" class="create-input" name="password" type="password" required>
+      </div>
+      <button class="create-btn" id="create-btn">CREATE</button>
+    </form>
+  </div>
+<script>
+    const pwordAgain = document.getElementById("pword-again");
+    const pword = document.getElementById("pword");
+    const uname = document.getElementById('uname');
+    const createBtn = document.getElementById('create-btn');
+
+    function wobble(el){
+        element.animate(
+          [
+            { transform: "rotate(0deg)" },
+            { transform: "rotate(15deg)" },
+            { transform: "rotate(-10deg)" },
+            { transform: "rotate(15deg)" },
+            { transform: "rotate(-10deg)" },
+            { transform: "rotate(5deg)" },
+            { transform: "rotate(0deg)" }
+          ],
+          {
+            duration: 100,
+            iterations: 1
+          }
+        );
+    }
+
+    createBtn.addEventListener('click', () => {
+        if (pwordAgain.classList.contains("bad-password")){
+            wobble(pwordAgain);
+        }
+        if (pword.classList.contains("bad-password")){
+            wobble(pword);
+        }
+        if (uname.classList.contains("bad-username")){
+            wobble(uname);
+        }
+    });
+
+    pwordAgain.setCustomValidity('Passwords Do Not Match');
+    pwordAgain.addEventListener('input', () =>{
+        if (pwordAgain.value !== pword.value){
+            pwordAgain.classList.remove('good-password');
+            pwordAgain.classList.add('bad-password');
+            pwordAgain.setCustomValidity("Passwords don't match");
+        }else{
+            pwordAgain.classList.remove('bad-password');
+            pwordAgain.classList.add('good-password');
+            pwordAgain.setCustomValidity("");
+        }
+
+        if (pwordAgain.value == ''){
+            pwordAgain.classList.remove('good-password');
+            pwordAgain.classList.remove('bad-password');
+        }
+    });
+    pword.addEventListener('input', () =>{
+        if (pwordAgain.value != ''){
+            if (pwordAgain.value !== pword.value){
+                pwordAgain.classList.remove('good-password');
+                pwordAgain.classList.add('bad-password');
+                pwordAgain.setCustomValidity("Passwords don't match");
+            }else{
+                pwordAgain.classList.remove('bad-password');
+                pwordAgain.classList.add('good-password');
+                pwordAgain.setCustomValidity("");
+            }
+        }
+
+        let regex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$%^&*()\-\_=+\[\]{};:'",.<>?/`~])[A-Za-z0-9!@#$%^&*()\-\_=+\[\]{};:'",.<>?/`~]{8,254}$/;
+
+        if (regex.test(pword.value)){
+            pword.classList.remove('bad-password'); 
+            pword.classList.add('good-password');
+            pword.setCustomValidity("");
+        }else{
+            pword.classList.remove('good-password');
+            pword.classList.add('bad-password');
+            pword.setCustomValidity("Password is too weak!");
+        }
+
+        if (pword.value == ''){
+            pword.classList.remove('bad-password');
+            pword.classList.remove('good-password');
+        }
+    });
+
+    uname.addEventListener('input', async () =>{
+        if (uname.value == ''){
+            uname.classList.remove('bad-username');
+            uname.classList.remove('good-username');
+            return;
+        }
+        const unameExists = await getUserExists(uname.value);
+        if (!unameExists){
+            uname.classList.remove('bad-username');
+            uname.classList.add('good-username');
+        }else{
+            uname.classList.remove('good-username');
+            uname.classList.add('bad-username');
+        }
+    });
+
+    async function getUserExists(username){
+        try{
+            const url = "{{ url_for('get_username', username='TEMP') }}";
+            const response = await fetch(url.replace('TEMP', username));
+            const data = await response.json();
+            
+            if (response.ok){
+                return data.isUser;
+            } else{
+                console.error("Error: Failed to get user data");
+                return false;
+            }
+        } catch (error){
+            console.error("Network Error: ", error);
+            return false
+        }
+    }
+
+</script>
+{% endblock %}
+
+

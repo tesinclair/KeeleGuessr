@@ -1,62 +1,100 @@
 {% extends "layout.html" %}
 {% block content %}
-  <div class="row">
-    <div class="col-md-7">
-      <div class="card">
-        <div class="card-body photo-area">
-          <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="campus photo">
-          <p class="mt-2"><strong>{{ photo.caption or 'Campus Photo' }}</strong></p>
-        </div>
-      </div>
+<section class="game">
+    <div class="scores">
+        {% if session.user_logged_in %}
+        <span class="highscore"> High Score: {{ session.user_highscore }} </span>
+        {% endif %}
+        <span class="current-score">Score: {{ session.current_score }} </span>
+    <div class="photo">
+        <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="Photo isn't available now, please try again later.">
     </div>
-    <div class="col-md-5">
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5>Click on the map to guess</h5>
-          <div id="map" style="height:400px;"></div>
-          <button id="submitGuess" class="btn btn-primary mt-2">Submit Guess</button>
-          <div id="resultArea" class="mt-3"></div>
-        </div>
-      </div>
+    <div class="guess-zone">
+        <div id="map"></div>
+        <button id="submitGuess">GUESS</button>
+        <div id="resultArea"></div>
     </div>
-  </div>
-
-  <script>
+</section>
+<script>
+    const boxTopLeft = L.latLng(53.007968, -2.282653);
+    const boxBottomRight = L.latLng(52.988923, -2.252456);
     const photoId = {{ photo.id }};
-    // initialize map
-    const map = L.map('map').setView(([52.994881, -2.267080], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+
+    const map = L.map('map', {zoomControl: false, minZoom: 13}).setView([52.994881, -2.267080], 16).setMaxBounds([
+        boxTopLeft,
+        boxBottomRight 
+    ]);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
 
     let guessMarker = null;
     let guessLatLng = null;
+    const guessZone = document.querySelector('.guess-zone');
+
+    map.on('mouseover', () =>{
+        setTimeout(function(){
+            map.invalidateSize();
+        }, 100);
+    });
 
     map.on('click', function(e){
-      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
-      guessMarker = L.marker(e.latlng).addTo(map).bindPopup("Your guess").openPopup();
-      guessLatLng = e.latlng;
+        if (guessMarker) { 
+            map.removeLayer(guessMarker); 
+            guessMarker = null; 
+        }
+        guessMarker = L.marker(e.latlng).addTo(map).bindPopup("Your guess").openPopup();
+        guessLatLng = e.latlng;
+
+        guessZone.classList.add('has-guess');
     });
 
     document.getElementById('submitGuess').addEventListener('click', async () => {
-      if (!guessLatLng) { alert('Please click the map to place your guess'); return; }
-      const payload = { photo_id: photoId, lat: guessLatLng.lat, lng: guessLatLng.lng };
+      if (!guessLatLng) { 
+        alert('Please click the map to place your guess'); 
+        return; 
+      }
+        // Probably don't question this it took a lot of thought to get
+        const payload = { 
+            photo_id: photoId, 
+            guess_lat: guessLatLng.lat, 
+            guess_lng: guessLatLng.lng, 
+            box: { 
+                topLeftLat: boxTopLeft.lat,
+                topLeftLng: boxTopLeft.lng,
+                topRightLat: boxTopLeft.lat,     
+                topRightLng: boxBottomRight.lng,
+                bottomLeftLat: boxBottomRight.lat,
+                bottomLeftLng: boxTopLeft.lng,
+                bottomRightLat: boxBottomRight.lat,
+                bottomRightLng: boxBottomRight.lng
+            }
+        };
       const resp = await fetch("{{ url_for('guess') }}", {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(payload)
       });
+      
       const j = await resp.json();
-      if (j.error) { alert(j.error); return; }
-      // show true location and distance
+      if (j.error) { 
+        alert(j.error); 
+        return; 
+      }
+      
       const trueLatLng = [j.true_lat, j.true_lng];
       L.marker(trueLatLng, {title:'True location'}).addTo(map).bindPopup("Actual location").openPopup();
       map.fitBounds(L.latLngBounds([guessLatLng, trueLatLng]).pad(0.2));
-      document.getElementById('resultArea').innerHTML = `<div class="alert alert-info">Distance: ${j.distance_m} m — Points: ${j.points}</div>`;
-      // optionally show a play-again link
-      setTimeout(()=>{ window.location.href = "{{ url_for('play') }}"; }, 5000);
+      
+      guessZone.classList.remove('has-guess');
+      guessZone.classList.add('has-result');
+      
+      document.getElementById('resultArea').innerHTML =
+        `<div>Distance: ${j.distance_m} m — Points: ${j.points}</div>`;
+      
+      setTimeout(()=>{ 
+        window.location.href = "{{ url_for('play') }}"; 
+      }, 5000);
     });
-  </script>
+
+</script>
 {% endblock %}
 

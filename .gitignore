@@ -1,9 +1,17 @@
 __pycache__/
+
 *.pyc
+
 .env/
+
 instance/
-geoguessr.db
+
+*.db
+
 static/uploads/*
+
 *.sqlite3
+
 .env
 
+hotreload.sh

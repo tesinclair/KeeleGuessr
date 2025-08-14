@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os, datetime, math, random
 from PIL import Image
@@ -41,6 +41,13 @@ class Photo(Base):
     lng = Column(Float, nullable=False)
     uploaded_at = Column(DateTime, default=func.now())
 
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    highscore = Column(Integer, default=0)
+
 Base.metadata.create_all(engine)
 
 # --- Helpers ---
@@ -58,6 +65,33 @@ def create_admin(username, password):
     h = generate_password_hash(password)
     a = Admin(username=username, password_hash=h)
     s.add(a); s.commit(); s.close()
+
+def create_user(username, password, current_score=0):
+    s = db_session()
+    if s.query(User).filter_by(username=username).first():
+        s.close()
+        raise ValueError("Usename already exists")
+    h = generate_password_hash(password)
+    a = User(username=username, password_hash=h, highscore=current_score)
+    s.add(a); s.commit(); s.close()
+
+def cli_login_required(fn):
+    from functools import wraps
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        import getpass
+        print("You must log in first.")
+        username = input("Admin Username: ").strip()
+        password = getpass.getpass("Admin Password: ")
+        s = db_session()
+        admin = s.query(Admin).filter_by(username=username).first()
+        s.close()
+        if admin and check_password_hash(admin.password_hash, password):
+            print("Logged in Successfully")
+            return fn(*args, **kwargs)
+        else:
+            print("Failed to login")
+    return wrapper
 
 def login_required(fn):
     from functools import wraps
@@ -99,6 +133,18 @@ def cli_create_admin():
     except Exception as e:
         print("Error:", e)
 
+@app.cli.command("show-admins")
+@cli_login_required
+def cli_show_admins():
+    s = db_session()
+    admins = s.execute(select(Admin.username)).all()
+    print()
+    print("Existing Admins: ")
+    for admin in admins:
+        print(admin[0])
+    print()
+    s.close()
+
 # --- Routes ---
 @app.route('/')
 def index():
@@ -107,14 +153,32 @@ def index():
 
 @app.route('/play')
 def play():
+
+    if not session.get('current_score'):
+        session['current_score'] = 0
+    if not session.get('seen_photos'):
+        session['seen_photos'] = []
+
     # Randomize selection server-side: pick one random photo
     s = db_session()
     # SQLite random: ORDER BY RANDOM() LIMIT 1
+    if len(session.get('seen_photos')) >= s.query(func.count(Photo.id)).scalar():
+        return redirect(url_for('seen_all_photos'))
+
     photo = s.query(Photo).order_by(func.random()).first()
+    while photo.id in session.get('seen_photos'):
+        photo = s.query(Photo).order_by(func.random()).first()
+
+    session['seen_photos'].append(photo.id)
+
     s.close()
     if not photo:
         return render_template('no_photos.html')
     return render_template('play.html', photo=photo)
+
+@app.route('/nomorephotos', methods=['GET'])
+def seen_all_photos():
+    return render_template('seen_all_photos.html')
 
 @app.route('/guess', methods=['POST'])
 def guess():
@@ -122,9 +186,10 @@ def guess():
     if not data:
         return jsonify({"error":"No JSON payload"}), 400
     photo_id = data.get('photo_id')
-    guess_lat = data.get('lat')
-    guess_lng = data.get('lng')
-    if photo_id is None or guess_lat is None or guess_lng is None:
+    guess_lat = data.get('guess_lat')
+    guess_lng = data.get('guess_lng')
+    box= data.get('box')
+    if photo_id is None or guess_lat is None or guess_lng is None or box is None:
         return jsonify({"error":"Missing fields"}), 400
     s = db_session()
     photo = s.query(Photo).get(photo_id)
@@ -133,16 +198,109 @@ def guess():
         return jsonify({"error":"Photo not found"}), 404
     true_lat, true_lng = photo.lat, photo.lng
     dist_m = haversine(true_lat, true_lng, float(guess_lat), float(guess_lng))
-    # Scoring: example simple function: score = max(0, round(10000 - distance)/100) but we'll do:
-    # 5000m -> 0, 0m -> 5000 points. Linear clamp.
-    max_points = 5000
-    points = max(0, round(max_points * (1 - min(dist_m, max_points)/max_points)))
+
+    # ============== Calculate Points ================
+    MAX_POINTS = 5000
+
+    if dist_m < 3: # arbitrary win distance to prevent unfair "never close enough" scoring
+        points = MAX_POINTS
+    else:
+        dist_topLeft = haversine(true_lat, true_lng, float(box['topLeftLat']), float(box['topLeftLng']))
+        dist_topRight = haversine(true_lat, true_lng, float(box['topRightLat']), float(box['topRightLng']))
+        dist_bottomLeft = haversine(true_lat, true_lng, float(box['bottomLeftLat']), float(box['bottomLeftLng']))
+        dist_bottomRight = haversine(true_lat, true_lng, float(box['bottomRightLat']), float(box['bottomRightLng']))
+
+        furthest_distance = max(dist_topLeft, dist_topRight, dist_bottomLeft, dist_bottomRight)
+
+        # points lost per meter distance
+        pts_per_m = MAX_POINTS/furthest_distance
+        points = MAX_POINTS - (pts_per_m * dist_m)
+
+    if points < 0:
+        points = 0;
+
+    # ================================================
+
+    if points == 5000:
+        session['current_score'] = session.get('current_score') + 1;
+        
     return jsonify({
         "distance_m": round(dist_m,1),
-        "points": points,
+        "points": math.floor(points),
         "true_lat": true_lat,
         "true_lng": true_lng
     })
+
+@app.route('/user/logout')
+def user_logout():
+    session.pop('user_logged_in', None)
+    session.pop('user_username', None)
+    session.pop('user_highscore', None)
+    flash('Logged out', 'info')
+    return redirect(url_for('play'))
+
+@app.route('/user/login', methods=['GET', 'POST'])
+def user_login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        current_score = session.get('current_score')
+        if not current_score:
+            current_score = 0;
+
+        s = db_session()
+        user = s.query(User).filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            session['user_logged_in'] = True
+            session['user_username'] = username
+            session['current_score'] = current_score
+
+            if current_score > user.highscore:
+                user.highscore = current_score
+                s.commit(); s.close()
+
+            session['user_highscore'] = user.highscore
+            flash('Logged in successfully', 'success')
+            nxt = request.args.get('next') or url_for('play')
+            return redirect(nxt)
+        s.close()
+        flash('Dodgy Credentials.', 'danger')
+    return render_template('login.html')
+
+@app.route('/user/create', methods=['GET', 'POST'])
+def user_create():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        try:
+            create_user(username, password, score=session.get('current_score'));
+            flash('Account Created', 'success')
+            return redirect(url_for('play'))
+        except ValueError as e:
+            flash('Failed to create account. Username probably taken.', 'danger')
+
+    return render_template('create_user.html')
+
+@app.route('/get/username/<username>')
+def get_username(username):
+    s = db_session()
+    user = s.query(User).filter_by(username=username).first()
+    s.close()
+    if user:
+        return jsonify({
+            'isUser': True 
+        })
+    else:
+        return jsonify({
+            'isUser': False
+        })
+
+@app.route('/reset')
+def reset_photos():
+    session['seen_photos'] = []
+    session['current_score'] = 0
+    return redirect(url_for('play'))
 
 # --- Admin routes ---
 @app.route('/admin/login', methods=['GET','POST'])
@@ -157,21 +315,21 @@ def admin_login():
             session['admin_logged_in'] = True
             session['admin_username'] = username
             flash('Logged in successfully', 'success')
-            nxt = request.args.get('next') or url_for('admin_upload')
+            nxt = request.args.get('next') or url_for('admin')
             return redirect(nxt)
         flash('Invalid credentials', 'danger')
-    return render_template('admin_login.html')
+    return render_template('login.html')
 
 @app.route('/admin/logout')
 def admin_logout():
     session.pop('admin_logged_in', None)
     session.pop('admin_username', None)
     flash('Logged out', 'info')
-    return redirect(url_for('admin_login'))
+    return redirect(url_for('play'))
 
-@app.route('/admin/upload', methods=['GET','POST'])
+@app.route('/admin', methods=['GET','POST'])
 @login_required
-def admin_upload():
+def admin():
     if request.method == 'POST':
         if 'photo' not in request.files:
             flash('No file part', 'danger')
@@ -207,7 +365,7 @@ def admin_upload():
             p = Photo(filename=name, caption=caption, lat=float(lat), lng=float(lng))
             s.add(p); s.commit(); s.close()
             flash('Photo uploaded and saved.', 'success')
-            return redirect(url_for('admin_upload'))
+            return redirect(url_for('admin'))
         else:
             flash('Invalid file type', 'danger')
             return redirect(request.url)
@@ -225,7 +383,7 @@ def admin_delete(photo_id):
     if not photo:
         s.close()
         flash('Not found', 'danger')
-        return redirect(url_for('admin_upload'))
+        return redirect(url_for('admin'))
     # delete file
     path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
     try:
@@ -237,7 +395,7 @@ def admin_delete(photo_id):
     s.commit()
     s.close()
     flash('Deleted', 'info')
-    return redirect(url_for('admin_upload'))
+    return redirect(url_for('admin'))
 
 # route to serve uploaded images (static does that already but here's explicit)
 @app.route('/uploads/<path:filename>')
