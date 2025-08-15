@@ -72,13 +72,13 @@ def create_admin(username, password):
     a = Admin(username=username, password_hash=h)
     s.add(a); s.commit(); s.close()
 
-def create_user(username, password, current_score=0):
+def create_user(username, password, score=0):
     s = db_session()
     if s.query(User).filter_by(username=username).first():
         s.close()
         raise ValueError("Usename already exists")
     h = generate_password_hash(password)
-    a = User(username=username, password_hash=h, highscore=current_score)
+    a = User(username=username, password_hash=h, highscore=score)
     s.add(a); s.commit(); s.close()
 
 def add_suggestion(user_id, content):
