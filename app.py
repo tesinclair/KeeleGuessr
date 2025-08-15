@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os, datetime, math, random
 from PIL import Image
@@ -48,6 +48,12 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     highscore = Column(Integer, default=0)
 
+class Suggestion(Base):
+    __tablename__ = 'suggestions'
+    id = Column(Integer, primary_key=True)
+    content = Column(String(512), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+
 Base.metadata.create_all(engine)
 
 # --- Helpers ---
@@ -75,22 +81,40 @@ def create_user(username, password, current_score=0):
     a = User(username=username, password_hash=h, highscore=current_score)
     s.add(a); s.commit(); s.close()
 
+def add_suggestion(user_id, content):
+    s = db_session()
+    if not s.query(User).filter_by(id=user_id).first():
+        s.close()
+        raise ValueError("User doesn't exist")
+    if len(content) > 511:
+        s.close()
+        raise ValueError("Content too long")
+
+    a = Suggestion(content=content, user_id=user_id)
+    s.add(a); s.commit(); s.close()
+
 def cli_login_required(fn):
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
         import getpass
+        s = db_session()
+
+        if not s.query(Admin).first():
+            s.close()
+            return fn(*args, **kwargs)
+
         print("You must log in first.")
         username = input("Admin Username: ").strip()
         password = getpass.getpass("Admin Password: ")
-        s = db_session()
         admin = s.query(Admin).filter_by(username=username).first()
         s.close()
+
         if admin and check_password_hash(admin.password_hash, password):
             print("Logged in Successfully")
             return fn(*args, **kwargs)
-        else:
-            print("Failed to login")
+
+        print("Failed to login")
     return wrapper
 
 def login_required(fn):
@@ -101,6 +125,16 @@ def login_required(fn):
             return fn(*args, **kwargs)
         flash("Please log in as admin to access that page.", "warning")
         return redirect(url_for('admin_login', next=request.path))
+    return wrapper
+
+def user_login_required(fn):
+    from functools import wraps
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if session.get('user_logged_in'):
+            return fn(*args, **kwargs)
+        flash("Ah ah ah. You need to be logged in!", "warning")
+        return redirect(url_for('user_login', next=request.path))
     return wrapper
 
 # Haversine distance in meters
@@ -116,6 +150,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 # --- CLI helper via flask commands ---
 @app.cli.command("create-admin")
+@cli_login_required
 def cli_create_admin():
     import getpass
     username = input("Admin username: ").strip()
@@ -174,6 +209,30 @@ def play():
     if not photo:
         return render_template('no_photos.html')
     return render_template('play.html', photo=photo)
+
+@app.route('/suggestion', methods=['GET', 'POST'])
+@user_login_required
+def suggestion():
+    if not session.get('user_logged_in'):
+        flash("You're a cheeky one, I'll grant you. But you need to piss off now.", "danger")
+        return redirect(url_for('user_login'))
+
+    if request.method == 'POST':
+        s = db_session()
+        user_id = s.query(User.id).filter_by(username=session.get('user_username')).scalar()
+        s.close()
+        if not user_id:
+            flash("Okay... how in God's name did you get this far?????", "Warning");
+            return redirect(url_for('user_login'))
+
+        content = request.form.get('suggestion-content', '').strip()
+        try:
+            add_suggestion(user_id, content)
+            flash('Your suggestion has been added!', 'success')
+        except ValueError as e:
+            flash("Failed to add your suggestion. No idea why...", "danger")
+            print(e)
+    return render_template('suggestion.html')
 
 @app.route('/nomorephotos', methods=['GET'])
 def seen_all_photos():

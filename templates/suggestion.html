@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="add-suggestion">
+    <h4>Suggestion Box</h4>
+    <form autocomplete="off" method="post">
+        <div class="suggestion-box">
+            <textarea id="suggestion-box-input" class="suggestion-content input" name="suggestion-content" rows="4" cols="30" required></textarea>
+            <span id="char-counter" class="sb-char-counter">511</span>
+            <!-- Basically this whole svg and movement code was made with haikei.app and AI. I don't know how SVGs work -->
+            <svg id="content-wave" class="content-wave-svg" viewBox="0 0 1000 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                    <linearGradient id="waveGrad" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#440500" stop-opacity="0.9" />
+                        <stop offset="100%" stop-color="#8a0000" stop-opacity="0.9" />
+                    </linearGradient>
+                </defs>
+                <!-- Back layer (deep) -->
+                <path id="wave-back" fill="url(#waveGrad)" opacity="0.1"></path>
+                <!-- Mid layer -->
+                <path id="wave-mid" fill="url(#waveGrad)" opacity="0.25"></path>
+                <!-- Front layer (bright edge) -->
+                <path id="wave-front" fill="url(#waveGrad)" opacity=".4"></path>
+            </svg>
+            <div class="ocean-floor" id="ocean-floor"></div>
+        </div>
+        <button class="btn suggest-btn">SUGGEST</button>
+    </form>
+</div>
+<script>
+    const maxChars = 511;
+    let currChars = 0;
+
+    let waveHeight = 0;
+    const maxWaveHeight = 5; // actually wave height offset, but fuck it.
+
+    //                                                  max height 90%
+    const calcPercentage = (curr) => Math.floor((curr * 90) / maxChars);
+
+    const suggestionBox = document.getElementById('suggestion-box-input');
+    const charCounter = document.getElementById('char-counter');
+
+    const waveSvg = document.getElementById('content-wave');
+    const oceanFloor = document.getElementById('ocean-floor');
+      
+    suggestionBox.addEventListener('input', () => {
+        currChars = suggestionBox.value.length;
+        charCounter.innerHTML = (maxChars - currChars) >= 0 ? maxChars - currChars : 0;
+
+        if (currChars > maxChars){
+            suggestionBox.value = suggestionBox.value.slice(0, -1);
+        }
+
+        waveHeight = calcPercentage(currChars);
+
+        waveSvg.style.bottom = waveHeight + "%";
+        oceanFloor.style.height = (waveHeight + .1) + "%";
+
+    });
+
+    /* code courtesy of chatGPT. pretty sick actually */
+    const params = {
+    baseAmp: 10,
+    wobbleAmp: 2.5,
+    frequency: 2.2,
+    detail: 28,
+    speedBack: 0.25,
+    speedMid: 0.45,
+    speedFront: 0.7,
+    jitter: 0.6
+  };
+
+  const svg = document.querySelector('.content-wave-svg');
+  const pathBack = document.getElementById('wave-back');
+  const pathMid = document.getElementById('wave-mid');
+  const pathFront = document.getElementById('wave-front');
+
+  function getViewMetrics() {
+    return { viewW: 1000, viewH: 100 };
+  }
+
+  function buildSmoothPath(points, viewW, viewH) {
+    let d = `M 0 ${viewH} L ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const p0 = points[i - 1];
+      const p1 = points[i];
+      const cx = (p0.x + p1.x) / 2;
+      d += ` Q ${p0.x} ${p0.y} ${cx} ${(p0.y + p1.y) / 2}`;
+    }
+    const last = points[points.length - 1];
+    d += ` L ${viewW} ${last.y} L ${viewW} ${viewH} L 0 ${viewH} Z`;
+    return d;
+  }
+
+  function computeWavePoints(t, phaseOffset = 0, ampMul = 1, yOffset = 0) {
+    const { viewW } = getViewMetrics();
+    const pts = [];
+    const n = Math.max(8, params.detail);
+    for (let i = 0; i <= n; i++) {
+      const x = (i / n) * viewW;
+      const progress = i / n;
+      const angle = (progress * Math.PI * 2 * params.frequency) + (t + phaseOffset);
+      const base = Math.sin(angle);
+      const wobble = Math.sin(angle * 2.13 + Math.cos(t * 0.5)) * params.wobbleAmp;
+      const jitter = (Math.random() - 0.5) * params.jitter;
+      const amp = (params.baseAmp + wobble) * ampMul;
+      const baseline = 70 + yOffset;
+      const y = baseline - base * amp + jitter;
+      pts.push({ x, y });
+    }
+    return pts;
+  }
+
+  let start = performance.now();
+
+  function frame(now) {
+    const t = (now - start) / 1000;
+    const ptsBack  = computeWavePoints(t * params.speedBack,  0.0, 0.75,  6);
+    const ptsMid   = computeWavePoints(t * params.speedMid,   0.7, 1.00,  2);
+    const ptsFront = computeWavePoints(t * params.speedFront, 1.4, 1.25, -2);
+
+    const { viewW, viewH } = getViewMetrics();
+    pathBack.setAttribute('d',  buildSmoothPath(ptsBack,  viewW, viewH));
+    pathMid.setAttribute('d',   buildSmoothPath(ptsMid,   viewW, viewH));
+    pathFront.setAttribute('d', buildSmoothPath(ptsFront, viewW, viewH));
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+</script>
+{% endblock %}

@@ -3,6 +3,8 @@
     --font-color-hover: rgb(150, 150, 150);
     --bg-color-normal: rgb(10, 10, 10);
     --btn-color-normal: rgb(0, 0, 100);
+
+    --wave-height: 0;
 }
 
 body{
@@ -412,10 +414,15 @@ input[type=number]{
 
 .login-input,
 .create-input{
-    border: 2px solid rgb(100, 100, 100);
-    background-color: var(--bg-color-normal);
     height: 2.5em;
     width: 25em;
+}
+
+.login-input,
+.create-input,
+.input{
+    border: 2px solid rgb(100, 100, 100);
+    background-color: rgba(0, 0, 0, 0);
     border-radius: .5em;
     color: var(--font-color-normal);
     font-size: 1.5ch;
@@ -468,4 +475,70 @@ input[type=number]{
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* suggestions */
+.add-suggestion{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.add-suggestion h4{
+    font-size: 4ch;
+}
+
+.suggestion-box{
+    position: relative;
+    height: 10em;
+    transition: all .3s ease;
+}
+
+.suggestion-box:hover,
+.suggestion-box:has(.suggestion-content:focus),
+.suggestion-box:has(.suggestion-content:valid){
+    height: 40svh;
+    width: 60svw;
+
+    .content-wave-svg, .ocean-floor{
+        width: 103.5%;
+    }
+
+}
+.suggestion-content{
+    height: 100%;
+    width: 100%;
+    z-index: 2;
+    padding-block: 2em;
+}
+
+.sb-char-counter{
+    font-size: 1.5ch;
+    position: absolute;
+    right: -2ch;
+    bottom: 0;
+    z-index: 2;
+}
+
+/* suggestion wave */
+.content-wave-svg{
+    z-index: 1;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 110%;
+    transition: width .3s ease;
+}
+
+.ocean-floor{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    background-color: #8a0000;
+    opacity: 0.5;
+    height: 0%;
+    width: 110%;
 }
