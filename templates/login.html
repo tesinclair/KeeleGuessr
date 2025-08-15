@@ -2,14 +2,15 @@
 {% block content %}
   <div class="login">
     <h4>Login</h4>
-    <form method="post">
-      <div class="uname" id="uname">
+    <form autocomplete="off" method="post">
+        <input type="hidden" autocomplete="false" style="display:none;">
+      <div class="uname">
         <input class="login-input" name="username" required>
       </div>
-      <div class="pword" id="pword">
+      <div class="pword">
         <input class="login-input" name="password" type="password" required>
       </div>
-      <button class="login-btn">LOGIN</button>
+      <button class="btn login-btn">LOGIN</button>
     </form>
   </div>
 {% endblock %}

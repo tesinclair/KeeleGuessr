@@ -153,7 +153,6 @@ def index():
 
 @app.route('/play')
 def play():
-
     if not session.get('current_score'):
         session['current_score'] = 0
     if not session.get('seen_photos'):
@@ -221,14 +220,20 @@ def guess():
 
     # ================================================
 
+    temp_highscore = 0;
     if points == 5000:
         session['current_score'] = session.get('current_score') + 1;
+        if session.get('user_logged_in') and session.get('user_highscore') < session.get('current_score'):
+            session['user_highscore'] = session.get('current_score'); 
+            temp_highscore = session.get('user_highscore')
         
     return jsonify({
         "distance_m": round(dist_m,1),
         "points": math.floor(points),
         "true_lat": true_lat,
-        "true_lng": true_lng
+        "true_lng": true_lng,
+        "current_score": session.get('current_score'),
+        'highscore': temp_highscore
     })
 
 @app.route('/user/logout')

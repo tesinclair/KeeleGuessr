@@ -2,6 +2,7 @@
     --font-color-normal: rgb(220, 220, 220);
     --font-color-hover: rgb(150, 150, 150);
     --bg-color-normal: rgb(10, 10, 10);
+    --btn-color-normal: rgb(0, 0, 100);
 }
 
 body{
@@ -59,8 +60,43 @@ body{
     margin-right: 1em;
 }
 
+.scores{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5em;
+    position: relative;
+}
+.scores > *{
+    transition: transform .5s ease;
+}
+
+.scores::before{
+    content: '';
+    position: absolute;
+    background-color: var(--bg-color-normal);
+    width: 10px;
+    right: 1px;
+    height: 101%;
+    z-index: 2;
+}
+.scores::after{
+    content: '';
+    position: absolute;
+    background-color: rgba(200, 200, 200, 1);
+    filter: blur(2px);
+    width: 2px;
+    height: 100%;
+    right: 0;
+    z-index: 1;
+}
 .current-score{
-    text-align: center;
+    font-size: 8ch;
+}
+.highscore{
+    font-size: 3ch;
 }
 
 /* Initially hide buttons */
@@ -104,7 +140,7 @@ body{
     height: 95svh;
     width: 100svw;
     text-align: center;
-    z-index: 1;
+    flex: 9;
 }
 .photo img{
     max-height: 100%;
@@ -112,6 +148,7 @@ body{
 }
 .game{
     position: relative;
+    display: flex;
 }
 
 /* nav */
@@ -336,10 +373,24 @@ input[type=number]{
 
 .uname:hover::before,
 .pword:hover::before,
-.pword-again:hover::before,
 .uname:has(.login-input:focus)::before,
-.pword:has(.login-input:focus)::before,
-.pword-again:has(.login-input:focus)::before,
+.pword:has(.login-input:focus)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: darkorange;
+}
+.uname:has(.login-input:valid)::before,
+.pword:has(.login-input:valid)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: orange;
+}
+
+.uname:has(.create-input):hover::before,
+.pword:has(.create-input):hover::before,
+.pword-again:hover::before,
 .uname:has(.create-input:focus)::before,
 .pword:has(.create-input:focus)::before,
 .pword-again:has(.create-input:focus)::before{
@@ -370,12 +421,14 @@ input[type=number]{
     font-size: 1.5ch;
     padding-inline: 1em;
 }
+
 .login-btn,
-.create-btn{
+.create-btn,
+.btn{
     width: 8em;
     height: 4em;
-    background-color: rgb(0, 0, 100);
-    border: 2px solid rgb(0, 0, 100);
+    background-color: var(--btn-color-normal);
+    border: 2px solid var(--btn-color-normal);
     border-radius: 2em;
     color: var(--font-color-normal);
     transition: all .3s ease;
@@ -384,9 +437,35 @@ input[type=number]{
 .login-btn:hover,
 .login-btn:focus,
 .create-btn:hover,
-.create-btn:focus{
+.create-btn:focus,
+.btn:hover,
+.btn:focus{
     background-color: rgb(0, 0, 50);
     color: var(--font-color-hover);
     scale: 1.05;
 }
 
+/* Seen-all-photos */
+.no-more-photos{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.no-more-photos h2{
+    font-size: 4ch;
+}
+.nmp-b1{
+    margin-bottom: 5em;
+    text-align: center;
+    font-size: 2.1ch;
+}
+
+.nmp-reset-btn{
+    margin-block: 5em;
+    text-decoration: none;
+    font-size: 2.5ch;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

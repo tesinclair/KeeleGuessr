@@ -2,10 +2,11 @@
 {% block content %}
 <section class="game">
     <div class="scores">
+        <span id = "curr-score" class="current-score"> {{ session.current_score }} </span>
         {% if session.user_logged_in %}
-        <span class="highscore"> High Score: {{ session.user_highscore }} </span>
+        <span id = "highscore" class="highscore"> {{ session.user_highscore }} </span>
         {% endif %}
-        <span class="current-score">Score: {{ session.current_score }} </span>
+    </div>
     <div class="photo">
         <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="Photo isn't available now, please try again later.">
     </div>
@@ -16,11 +17,15 @@
     </div>
 </section>
 <script>
+
+    const currScore = document.getElementById('curr-score');
+    const highscore = document.getElementById('highscore');
+    
     const boxTopLeft = L.latLng(53.007968, -2.282653);
     const boxBottomRight = L.latLng(52.988923, -2.252456);
     const photoId = {{ photo.id }};
 
-    const map = L.map('map', {zoomControl: false, minZoom: 13}).setView([52.994881, -2.267080], 16).setMaxBounds([
+    const map = L.map('map', {zoomControl: false, minZoom: 15, maxZoom: 18}).setView([52.994881, -2.267080], 16).setMaxBounds([
         boxTopLeft,
         boxBottomRight 
     ]);
@@ -89,11 +94,35 @@
       
       document.getElementById('resultArea').innerHTML =
         `<div>Distance: ${j.distance_m} m — Points: ${j.points}</div>`;
+
+      if (j.points >= 5000){
+          updateScore(currScore, j.current_score);
+          {% if session.user_logged_in %}
+            if (j.highscore != 0){
+                updateScore(highscore, j.highscore);
+            }
+          {% endif %}
+      }
       
       setTimeout(()=>{ 
         window.location.href = "{{ url_for('play') }}"; 
-      }, 5000);
+      }, 3000);
     });
+
+    function updateScore(el, newScore){
+        const pivotZ = -20;
+        el.style.transform = `translateZ(${pivotZ}px) rotateX(90deg) translateZ(${-pivotZ}px)`;
+        setTimeout(() => {
+            el.style.transition = 'none';
+            el.style.transform = `translateZ(${pivotZ}px) rotateX(270deg) translateZ(${-pivotZ}px)`;
+            el.innerHTML = newScore;
+
+            requestAnimationFrame(()=>{
+                el.style.transition = 'transform .5s ease';
+                el.style.transform = `translateZ(${pivotZ}px) rotateX(0deg) translateZ(${-pivotZ}px)`;
+            });
+        }, 500); // .5s transition from css
+    }
 
 </script>
 {% endblock %}
