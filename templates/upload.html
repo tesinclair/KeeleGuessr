@@ -5,23 +5,28 @@
   <div>
     <form class="upload-form" method="post" enctype="multipart/form-data">
       <div>
-        <input type="file" name="photo" accept="image/*" required>
+        <input id="photo" type="file" name="photo" accept="image/*" required>
         <div id="upload-map"></div>
       </div>
-      <div class="coord-manual-box">
+      <div class="coord-manual-box hidden" id="cm-box">
           <input type="number" name="lat" id="lat-man">
           <input type="number" name="lng" id="lng-man">
-          <button class="set-coords-btn" id="man-btn">Set Coords</button>
+          <button class="btn" id="man-btn">Set Coords</button>
+      </div>
+      <div class="auto-coord-validation hidden" id="ac-validator">
+          <button id="manual-coords-btn" class="btn" onclick="document.getElementById('cm-box').classList.remove('hidden'); document.getElementById('ac-validator').classList.add('hidden');">
+              MANUAL
+          </button>
       </div>
       <input type="hidden" name="lat" id="lat">
       <input type="hidden" name="lng" id="lng">
-      <button class="pu-submit-btn" type="submit" id="form-submit">Upload</button>
+      <button id="pu-submit-btn" class="btn" type="submit" id="form-submit">Upload</button>
     </form>
   </div>
 {% endblock %}
 
 {% block scripts %}
-  <script>
+<script>
     let curr_lat = 52.994881;
     let curr_lng = -2.267080;
     const map = L.map('upload-map', {zoomControl: false}).setView([curr_lat, curr_lng], 16);
@@ -29,33 +34,56 @@
       maxZoom: 19,
     }).addTo(map);
 
-    let lat_man = document.getElementById('lat-man');
-    let lng_man = document.getElementById('lng-man');
+    const lat_man = document.getElementById('lat-man');
+    const lng_man = document.getElementById('lng-man');
+    const lat = document.getElementById('lat');
+    const lng = document.getElementById('lng');
+
 
     let marker = null;
     map.on('click', function(e){
         if(marker) map.removeLayer(marker);
-        marker = L.marker(e.latlng).addTo(map);
         lat_man.value = e.latlng.lat;
         lng_man.value = e.latlng.lng;
-        curr_lat = e.latlng.lat;
-        curr_lng = e.latlng.lng;
+        lat.value = e.latlng.lat;
+        lng.value = e.latlng.lng;
+        marker = L.marker([lat.value, lng.value]).addTo(map);
     });
 
+    map.on('layeradd', function(e){
+        map.setView([lat.value, lng.value], 18);
+    });
+
+    document.getElementById('photo').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try{
+            const metadata = await exifr.gps(file);
+            console.log(metadata.latitude, lat, lng);
+            if (metadata){
+                if (marker) map.removeLayer(marker);
+                lat.value = metadata.latitude;
+                lng.value = metadata.longitude;
+                marker = L.marker([lat.value, lng.value]).addTo(map);
+                document.getElementById('ac-validator').classList.remove('hidden');
+            }else{
+                document.getElementById('cm-box').classList.remove('hidden');
+            }
+        } catch (err){
+            console.error("Failed to parse photo: ", err);
+        }
+    });
+
+    
     document.getElementById('man-btn').addEventListener('click', (e)=>{
         e.preventDefault();
         if (marker) map.removeLayer(marker);
-        curr_lat = lat_man.value;
-        curr_lng = lng_man.value;
-        map.setView([curr_lat, curr_lng], 18);
-        marker = L.marker([curr_lat, curr_lng]).addTo(map);
+        lat.value = lat_man.value;
+        lng.value = lng_man.value;
+        marker = L.marker([lat.value, lng.value]).addTo(map);
     });
 
-    document.getElementById('form-submit').addEventListener('click', (e)=>{
-        e.preventDefault();
-        document.getElementById('lat').value = curr_lat;
-        document.getElementById('lng').value = curr_lng;
-    });
-  </script>
+</script>
 {% endblock %}
 

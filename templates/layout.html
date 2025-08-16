@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.min.js"></script>
   </head>
   <body>
     <nav class="nav">
@@ -28,7 +29,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, msg in messages %}
-          <div class="flash" id="flash-div">
+        <div class="flash {{ category }}" id="flash-div">
               {% if category == "danger" %}
               <span class="flash-msg" style="color: red;"> {{msg}} </span>
               {% elif category == "warning" %}
@@ -38,7 +39,7 @@
               {% else %}
               <span class="flash-msg" style="color: lightblue;"> {{msg}} </span>
               {% endif %}
-              <button class="flash-btn" type="button" onclick="document.getElementById('flash-div').style.display = 'none';">x</button>
+              <button class="flash-btn" type="button" onclick="killFlash()">⨯</button>
           </div>
         {% endfor %}
       {% endif %}
@@ -48,5 +49,15 @@
 
     {% block scripts %}{% endblock %}
   </body>
+  <script>
+      flash = document.getElementById('flash-div');
+      function killFlash(){
+          // .3s transition
+          flash.style.right = `-${flash.offsetWidth}px`;
+          setTimeout(() => {
+              flash.classList.add('hidden');
+          }, 300);
+      }
+  </script>
 </html>
 
