@@ -14,7 +14,7 @@
           <button class="btn" id="man-btn">Set Coords</button>
       </div>
       <div class="auto-coord-validation hidden" id="ac-validator">
-          <button id="manual-coords-btn" class="btn" onclick="document.getElementById('cm-box').classList.remove('hidden'); document.getElementById('ac-validator').classList.add('hidden');">
+          <button type="button" id="manual-coords-btn" class="btn" onclick="manualCoords()">
               MANUAL
           </button>
       </div>
@@ -53,6 +53,11 @@
     map.on('layeradd', function(e){
         map.setView([lat.value, lng.value], 18);
     });
+
+    function manualCoords(){
+        document.getElementById('cm-box').classList.remove('hidden');
+        document.getElementById('ac-validator').classList.add('hidden');
+    }
 
     document.getElementById('photo').addEventListener('change', async (e) => {
         const file = e.target.files[0];

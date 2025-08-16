@@ -27,8 +27,8 @@ body{
 /* Message flashes */
 .flash{
     position: absolute;
-    top: 0.5em;
-    right: 3em;
+    top: 3em;
+    right: calc(-100%);
     border-radius: 1rem;
     padding: 1em;
     text-align: center;

@@ -51,6 +51,13 @@
   </body>
   <script>
       flash = document.getElementById('flash-div');
+
+      requestAnimationFrame(()=>{
+        if (flash){
+            flash.style.right = 3 + "em";
+        }
+      })
+
       function killFlash(){
           // .3s transition
           flash.style.right = `-${flash.offsetWidth}px`;
