@@ -2,13 +2,12 @@
 {% block content %}
     <div class="no-more-photos">
         <h2>You're Done!</h2>
-        <!-- No more photos, block n (nmp-bn) -->
         <div class="nmp-b1">
             <p>It looks like you're a little nerd that has so much free time that you've seen all of our photos.</p>
             <p>Your final score is: {{ session.current_score }}. Now go do your coursework.</p>
         </div>
         <p>Alternatively, you can press the big reset button below, and reset your seen photos. But please go outside first...</p>
-        <a class="btn nmp-reset-btn" href="{{url_for('reset_photos')}}">RESET</a>
+        <a class="btn user" href="{{url_for('reset_photos')}}">RESET</a>
         {% if not session.user_logged_in %}
         <p class="footer"> Psst. You're not logged in, so your highscore will be deleted... create an account or log in to save it!</p>
         {% endif %}

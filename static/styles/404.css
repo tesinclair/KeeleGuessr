@@ -1,0 +1,27 @@
+.pnf-cont{
+    min-width: 100svw;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    gap: 1ch;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.pnf-cont h2{
+    font-size: 6ch;
+}
+.pnf-cont p{
+    font-size: 2.5ch;
+}
+.pnf-cont a{
+    text-decoration: none;
+    color: black;
+    font-size: 3ch;
+}
+.pnf-cont a:hover{
+    color: gray;
+}
+
+

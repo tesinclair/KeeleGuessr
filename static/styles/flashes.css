@@ -1,0 +1,52 @@
+.flash{
+    position: absolute;
+    top: 3em;
+    right: calc(-100%);
+    border-radius: 1rem;
+    padding: 1em;
+    text-align: center;
+    transition: all .3s ease;
+    background-color: rgba(20, 20, 20, .8);
+}
+
+.danger:is(.flash){
+    border: 2px solid red;
+}
+.warning:is(.flash){
+    border: 2px solid darkorange;
+}
+.success:is(.flash){
+    border: 2px solid green;
+}
+.info:is(.flash){
+    border: 2px solid lightblue;
+}
+.danger{
+    color: red;
+}
+.warning{
+    color: darkorange;
+}
+.success{
+    color: green;
+}
+.info{
+    color: lightblue;
+}
+
+.flash-btn{
+    position: absolute;
+    top:-1em;
+    right:-1.5em;
+    color: var(--font-color-normal);
+    background: none;
+    border: 1px solid var(--font-color-normal);
+    transition: all .3s ease;
+    border-radius: 100%;
+}
+.flash-btn:hover{
+    color: var(--font-color-hover);  
+    scale: 1.1;
+}
+
+

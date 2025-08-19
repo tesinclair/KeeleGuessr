@@ -1,0 +1,28 @@
+.nav{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-inline: 3em;
+    margin-block: 1em;
+}
+.nav a{
+    text-decoration: none;
+    color: var(--font-color-normal);
+    transition: all 0.3s ease;
+}
+.nav a:hover{
+    color: var(--font-color-hover);
+    scale: 1.01; 
+}
+
+.nav-header{
+    font-size: 3ch; 
+}
+.nav-list{
+    display: flex;
+    flex-direction: row;
+    gap: 2em;
+    color: var(--font-color-normal);
+}
+
+

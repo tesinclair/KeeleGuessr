@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os, datetime, math, random
 from PIL import Image
+from enum import IntEnum
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +17,21 @@ SECRET_KEY = os.environ.get('GEO_SECRET') or 'change-this-secret-in-prod'
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+# ------- Global `macros` ------------
+class Location(IntEnum):
+    KEELE = 1
+    ELSTEAD = 2
+    SETESDAL = 3
+
+class Difficulty(IntEnum):
+    EASY = 1
+    NORMAL = 2
+    HARD = 3
+    VERYHARD = 4
+
+DEFAULT_LOCATION = Location.ELSTEAD;
+DEFAULT_DIFFICULTY = Difficulty.NORMAL;
+
 # --- App and DB setup ---
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -25,7 +41,7 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
-# --- Models ---
+# --- Difficultyls ---
 class Admin(Base):
     __tablename__ = 'admins'
     id = Column(Integer, primary_key=True)
@@ -40,6 +56,8 @@ class Photo(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     uploaded_at = Column(DateTime, default=func.now())
+    location = Column(Integer, nullable=False)
+    difficulty = Column(Integer, nullable=False)
 
 class User(Base):
     __tablename__ = 'users'
@@ -53,6 +71,7 @@ class Suggestion(Base):
     id = Column(Integer, primary_key=True)
     content = Column(String(512), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
+    votes = Column(Integer, default=1)
 
 Base.metadata.create_all(engine)
 
@@ -183,31 +202,70 @@ def cli_show_admins():
 # --- Routes ---
 @app.route('/')
 def index():
-    # landing -> play
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html');
+
+@app.route('/get/configopts', methods=['GET'])
+def get_config_opts():
+    data = {
+        "location": {},
+        "difficulty": {}
+            }
+    for loc in Location:
+        data["location"][loc.name] = loc 
+    for difficulty in Difficulty:
+        data["difficulty"][difficulty.name] = difficulty
+
+    return jsonify(data), 200
+
+@app.route('/sessioncfg/<int:location>/<int:difficulty>')
+def session_config(location, difficulty):
+    if location not in Location:
+        flash("Please select a valid location", "warning")
+        return redirect(url_for('home'))
+    if difficulty not in Difficulty:
+        flash("Please select a valid difficulty", "warning")
+        return redirect(url_for('home'))
+
+    # on first login neither are set so always true
+    if session.get('location') != location or session.get('difficulty') != difficulty:
+        session['score'] = 0
+        session['seen_photos'] = []
+    session['location'] = location
+    session['difficulty'] = difficulty
+    for loc in Location:
+        if loc == location: 
+            session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
+
     return redirect(url_for('play'))
+
 
 @app.route('/play')
 def play():
-    if not session.get('current_score'):
-        session['current_score'] = 0
-    if not session.get('seen_photos'):
-        session['seen_photos'] = []
-
     # Randomize selection server-side: pick one random photo
     s = db_session()
-    # SQLite random: ORDER BY RANDOM() LIMIT 1
-    if len(session.get('seen_photos')) >= s.query(func.count(Photo.id)).scalar():
+    print(session.get('difficulty'))
+    print(s.query(func.count(Photo.id)).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).scalar())
+    if len(session.get('seen_photos')) >= s.query(func.count(Photo.id)).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).scalar():
+        s.close()
+
+        if len(session.get('seen_photos')) == 0: # if they haven't seen any photos then there prolly none there ay
+            return render_template('no_photos.html')
+
         return redirect(url_for('seen_all_photos'))
 
-    photo = s.query(Photo).order_by(func.random()).first()
+    photo = s.query(Photo).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).first()
+    print(photo);
     while photo.id in session.get('seen_photos'):
-        photo = s.query(Photo).order_by(func.random()).first()
+        photo = s.query(Photo).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).first()
+
+    s.close()
 
     session['seen_photos'].append(photo.id)
 
-    s.close()
-    if not photo:
-        return render_template('no_photos.html')
     return render_template('play.html', photo=photo)
 
 @app.route('/suggestion', methods=['GET', 'POST'])
@@ -238,6 +296,26 @@ def suggestion():
 def seen_all_photos():
     return render_template('seen_all_photos.html')
 
+@app.route('/admin/suggestions', methods=['GET', 'POST'])
+@login_required
+def admin_suggestions():
+    if request.method == "POST":
+        if not request.id:
+            flash("I need an id dog...", "danger")
+            return redirect(url_for('admin_suggestions'))
+        s = db_session()
+        suggestion = s.query(Suggestion).filter_by(id=request.id).first()
+        s.delete(suggestion); s.commit(); s.close();
+        flash("Deleted suggestion", "success")
+        return redirect(url_for('admin_suggestions'))
+
+    s = db_session()
+    suggestions = [[x] for x in s.execute(select(Suggestion)).scalars().all()]
+    for suggestion in suggestions:
+        suggestion.append(s.query(User.username).filter_by(id=suggestion[0].user_id).first()[0])
+    s.close()
+    return render_template('admin_suggestions.html', suggestions=suggestions)
+
 @app.route('/guess', methods=['POST'])
 def guess():
     data = request.json
@@ -259,8 +337,19 @@ def guess():
 
     # ============== Calculate Points ================
     MAX_POINTS = 5000
+    if session.get('difficulty') == Difficulty.EASY:
+        WIN_DIST = 7
+    elif session.get('difficulty') == Difficulty.NORMAL:
+        WIN_DIST = 5
+    elif session.get('difficulty') == Difficulty.HARD:
+        WIN_DIST = 3
+    elif session.get('difficulty') == Difficulty.VERYHARD:
+        WIN_DIST = 1
+    else:
+        flash("Please select a difficulty to play", "Danger")
+        return redirect(url_for('home'))
 
-    if dist_m < 3: # arbitrary win distance to prevent unfair "never close enough" scoring
+    if dist_m < WIN_DIST:
         points = MAX_POINTS
     else:
         dist_topLeft = haversine(true_lat, true_lng, float(box['topLeftLat']), float(box['topLeftLng']))
@@ -326,7 +415,7 @@ def user_login():
 
             session['user_highscore'] = user.highscore
             flash('Logged in successfully', 'success')
-            nxt = request.args.get('next') or url_for('play')
+            nxt = request.args.get('next') or url_for('home')
             return redirect(nxt)
         s.close()
         flash('Dodgy Credentials.', 'danger')
@@ -340,7 +429,7 @@ def user_create():
         try:
             create_user(username, password, score=session.get('current_score'));
             flash('Account Created', 'success')
-            return redirect(url_for('play'))
+            return redirect(url_for('home'))
         except ValueError as e:
             flash('Failed to create account. Username probably taken.', 'danger')
 
@@ -398,6 +487,29 @@ def admin():
         if 'photo' not in request.files:
             flash('No file part', 'danger')
             return redirect(request.url)
+
+        lat = request.form.get('lat')
+        lng = request.form.get('lng')
+        loc = request.form.get('location')
+        diff = request.form.get('difficulty')
+
+        print(lat, lng, loc, diff)
+        if not (loc and diff):
+            flash("Using location and difficulty defaults", "info");
+            loc = DEFAULT_LOCATION;
+            diff = DEFAULT_DIFFICULTY;
+        elif not loc:
+            flash("Using default location: " + DEFAULT_LOCATION.name[0] + DEFAULT_LOCATION.name[1:].lower(), "info")
+            loc = DEFAULT_LOCATION
+        elif not diff:
+            flash("Using default difficulty: " + DEFAULT_DIFFICULTY.name.lower(), "info")
+            diff = DEFAULT_DIFFICULTY
+
+
+        if not lat or not lng:
+            flash('You must click the map to set the photo location before uploading.', 'danger')
+            return redirect(request.url)
+
         file = request.files['photo']
         if file.filename == '':
             flash('No selected file', 'danger')
@@ -405,28 +517,22 @@ def admin():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             # add timestamp to filename to avoid collisions
-            name = f"{int(datetime.datetime.utcnow().timestamp())}_{filename}"
-            path = os.path.join(app.config['UPLOAD_FOLDER'], name)
-            file.save(path)
+            filename = f"{int(datetime.datetime.utcnow().timestamp())}_{os.path.splitext(filename)[0]}"
+            filename_full = filename + ".jpeg"
+            tmp_file = os.path.join(app.config['UPLOAD_FOLDER'], filename + "_upload")
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename_full)
+            file.save(tmp_file)
             # optional: resize/validate
+
             try:
-                img = Image.open(path)
-                img.verify()
-            except Exception:
-                os.remove(path)
-                flash("Uploaded file is not a valid image", "danger")
-                return redirect(request.url)
-            # get lat/lng from form
-            lat = request.form.get('lat')
-            lng = request.form.get('lng')
-            caption = request.form.get('caption','')
-            if not lat or not lng:
-                # delete file if no location selected
-                os.remove(path)
-                flash('You must click the map to set the photo location before uploading.', 'danger')
-                return redirect(request.url)
+                with Image.open(tmp_file) as img:
+                    img.save(path, format="JPEG")
+            finally:
+                if os.path.exists(tmp_file):
+                    os.remove(tmp_file)
+
             s = db_session()
-            p = Photo(filename=name, caption=caption, lat=float(lat), lng=float(lng))
+            p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=loc, difficulty=diff)
             s.add(p); s.commit(); s.close()
             flash('Photo uploaded and saved.', 'success')
             return redirect(url_for('admin'))
@@ -434,10 +540,7 @@ def admin():
             flash('Invalid file type', 'danger')
             return redirect(request.url)
     # GET
-    s = db_session()
-    photos = s.query(Photo).order_by(Photo.uploaded_at.desc()).all()
-    s.close()
-    return render_template('upload.html', photos=photos)
+    return render_template('upload.html')
 
 @app.route('/admin/delete/<int:photo_id>', methods=['POST'])
 @login_required

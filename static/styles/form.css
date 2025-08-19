@@ -1,0 +1,124 @@
+.login, form, 
+.create{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1svh;
+}
+
+.login h4,
+.create h4{
+    font-size: 5ch;
+}
+
+.login form > *,
+.create form > *{
+    margin-top: 1em;
+    text-align: center;
+}
+
+form div{
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    width: 100%;
+}
+label{
+    font-size: 1.5ch;
+}
+
+/* generalised login create again */
+.uname, .pword, .pword-again{
+    position: relative;
+    width: 100%;
+    height:100%;
+}
+
+.uname::before{
+    content: "Username";
+    color: var(--font-color-hover);
+}
+.pword::before{
+    content: "Password";
+    color: var(--font-color-hover);
+}
+.pword-again::before{
+    content: "Password Again";
+    color: var(--font-color-hover);
+}
+
+#uname-div:has(.good-username)::before,
+#pword-div:has(.good-password)::before,
+#pword-again-div:has(.good-password)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: lightgreen;
+}
+
+#uname-div:has(.bad-username)::before,
+#pword-div:has(.bad-password)::before,
+#pword-again-div:has(.bad-password)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: red;
+}
+
+.uname:hover::before,
+.pword:hover::before,
+.uname:has(.login-input:focus)::before,
+.pword:has(.login-input:focus)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: darkorange;
+}
+.uname:has(.login-input:valid)::before,
+.pword:has(.login-input:valid)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: orange;
+}
+
+.uname:has(.create-input):hover::before,
+.pword:has(.create-input):hover::before,
+.pword-again:hover::before,
+.uname:has(.create-input:focus)::before,
+.pword:has(.create-input:focus)::before,
+.pword-again:has(.create-input:focus)::before{
+    scale: .75;
+    left: 0;
+    top: -1em;
+    color: darkorange;
+}
+
+.uname::before, 
+.pword::before,
+.pword-again::before{
+    position: absolute;
+    top:50%;
+    left: 1em;
+    transform: translate(0, -50%);
+    transition: all .3s ease;
+}
+
+.login-input,
+.create-input{
+    height: 2.5em;
+    width: 25em;
+}
+
+.login-input,
+.create-input,
+.input{
+    border: 2px solid rgb(100, 100, 100);
+    background-color: rgba(0, 0, 0, 0);
+    border-radius: .5em;
+    color: var(--font-color-normal);
+    font-size: 1.5ch;
+    padding-inline: 1em;
+}
+

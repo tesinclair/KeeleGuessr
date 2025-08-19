@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="home-page">
+        <h2>Keele Guessr!</h2>
+        <p>Choose your location and difficulty and start guessing!</p>
+        <div class="hp-config">
+            <div class="hp-toggle NORMAL" id="hp-difficulty-toggle">
+                <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
+                <input type="hidden" name="difficulty" id="difficulty" value="2">
+            </div>
+            <div class="hp-toggle" id="hp-location-toggle">
+                <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
+                <input type="hidden" name="location" id="location" value="1">
+            </div>
+        </div>
+        <button onclick="configureSession()" class="btn user" id="hp-btn">PLAY</button>
+    </div>
+    <script>
+        const difficultyToggle = document.getElementById('hp-difficulty-toggle');
+        const locationToggle = document.getElementById('hp-location-toggle');
+        const difficultyInput = document.getElementById('difficulty');
+        const locationInput = document.getElementById('location');
+
+        const UP = 1;
+        const DOWN = -1;
+
+        // Defaults
+        let configOpts = { 
+            location: {
+                KEELE: 1,
+                ELSTEAD: 2
+            },
+            difficulty: {
+                EASY: 1,
+                NORMAL: 2,
+                HARD: 3
+            }
+        };
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+
+            if (!opts){
+                clientFlash("Network issue. Using Default Options", "warning");
+                return;
+            }
+            
+            configOpts.location = opts.location
+            configOpts.difficulty = Object.fromEntries(
+                Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
+                );
+
+        });
+
+        function configureSession(){
+            const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1)}}";
+            window.location.href = sessioncfgUrl.replace("/0/1", `/${locationInput.value}/${difficultyInput.value}`);
+        }
+
+        let locationScrollPos = -1;
+        let difficultyScrollPos = -1;
+
+        let numScrolls = 0;
+        locationToggle.addEventListener('wheel', (e) => {
+            if (numScrolls % 3 !== 0){
+                numScrolls++;
+                return;
+            }
+            // DOWN is when the hand scrolls down
+            let direction = getDirection(e.wheelDelta);
+            if (direction == 0) return;
+
+            locations = Object.keys(configOpts.location);
+
+            let locationChoice;
+            [locationScrollPos, locationChoice] = scrollObject(
+                document.getElementById('hp-location-toggle-text'),
+                direction,
+                locationScrollPos,
+                locations,
+                locations.length
+            );
+            numScrolls = ++numScrolls % 3;
+
+            locationInput.value = configOpts.location[locationChoice];
+        });
+
+        locationToggle.addEventListener('touchstart', () => {
+
+            locations = Object.keys(configOpts.location);
+
+            let locationChoice;
+            [locationScrollPos, locationChoice] = scrollObject(
+                document.getElementById('hp-location-toggle-text'),
+                DOWN,
+                locationScrollPos,
+                locations,
+                locations.length
+            );
+
+            locationInput.value = configOpts.location[locationChoice];
+        });
+
+
+        difficultyToggle.addEventListener('wheel', (e) => {
+            if (numScrolls % 3 !== 0){
+                numScrolls++;
+                return;
+            }
+            // DOWN is when the hand scrolls down
+            let direction = getDirection(e.wheelDelta);
+            if (direction == 0) return;
+
+            difficulties = Object.keys(configOpts.difficulty);
+
+            let difficultyChoice;
+            [difficultyScrollPos, difficultyChoice] = scrollObject(
+                document.getElementById('hp-difficulty-toggle-text'),
+                direction,
+                difficultyScrollPos,
+                difficulties,
+                difficulties.length
+            );
+            
+            difficultyToggle.className = "hp-toggle";
+            difficultyToggle.classList.add(difficultyChoice);
+
+            numScrolls = ++numScrolls % 3;
+
+            difficultyInput.value = configOpts.difficulty[difficultyChoice];
+        });
+
+        difficultyToggle.addEventListener('touchstart', () => {
+            difficulties = Object.keys(configOpts.difficulty);
+
+            let difficultyChoice;
+            [difficultyScrollPos, difficultyChoice] = scrollObject(
+                document.getElementById('hp-difficulty-toggle-text'),
+                DOWN,
+                difficultyScrollPos,
+                difficulties,
+                difficulties.length
+            );
+            
+            difficultyToggle.className = "hp-toggle";
+            difficultyToggle.classList.add(difficultyChoice);
+
+            difficultyInput.value = configOpts.difficulty[difficultyChoice];
+        });
+
+    </script>
+{% endblock %}

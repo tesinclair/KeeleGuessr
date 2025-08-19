@@ -13,7 +13,10 @@
     <div class="guess-zone">
         <div id="map"></div>
         <button id="submitGuess">GUESS</button>
-        <div id="resultArea"></div>
+        <div class="result-cont">
+            <div id="resultArea"></div>
+            <a class="btn user hidden" id="next-btn" href="{{url_for('play')}}">NEXT</a>
+        </div>
     </div>
 </section>
 <script>
@@ -21,11 +24,26 @@
     const currScore = document.getElementById('curr-score');
     const highscore = document.getElementById('highscore');
     
+    {% if session.location_text == "Keele" %}
     const boxTopLeft = L.latLng(53.007968, -2.282653);
     const boxBottomRight = L.latLng(52.988923, -2.252456);
+    const startingLocation = L.latLng(52.994881, -2.267080);
+    {% elif session.location_text == "Elstead" %}
+    const boxTopLeft = L.latLng(51.218211, -0.751114);
+    const boxBottomRight = L.latLng(51.140636, -0.649715);
+    const startingLocation = L.latLng(51.185065, -0.703607);
+    {% elif session.location_text == "Setesdal" %}
+    const boxTopLeft = L.latLng(51.007968, -2.282653);
+    const boxBottomRight = L.latLng(52.988923, -2.252456);
+    const startingLocation = L.latLng(52.994881, -2.267080);
+    {% else %}
+    clientFlash("You need to have a location to play!", "danger");
+    location.href = "{{url_for('home')}}"
+    {% endif %}
+
     const photoId = {{ photo.id }};
 
-    const map = L.map('map', {zoomControl: false, minZoom: 15, maxZoom: 18}).setView([52.994881, -2.267080], 16).setMaxBounds([
+    const map = L.map('map', {zoomControl: false, minZoom: 15, maxZoom: 18}).setView(startingLocation, 16).setMaxBounds([
         boxTopLeft,
         boxBottomRight 
     ]);
@@ -103,11 +121,9 @@
             }
           {% endif %}
       }
-      
-      setTimeout(()=>{ 
-        window.location.href = "{{ url_for('play') }}"; 
-      }, 3000);
-    });
+
+      document.getElementById('next-btn').classList.remove('hidden');
+      });
 
     function updateScore(el, newScore){
         const pivotZ = -20;

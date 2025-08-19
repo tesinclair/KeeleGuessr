@@ -1,0 +1,88 @@
+.no-more-photos{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.no-more-photos h2{
+    font-size: 4ch;
+}
+.nmp-b1{
+    margin-bottom: 5em;
+    text-align: center;
+    font-size: 2.1ch;
+}
+
+.nmp-reset-btn{
+    margin-block: 5em;
+    text-decoration: none;
+    font-size: 2.5ch;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* suggestions */
+.add-suggestion{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.add-suggestion h4{
+    font-size: 4ch;
+}
+
+.suggestion-box{
+    position: relative;
+    height: 10em;
+    transition: all .3s ease;
+}
+
+.suggestion-box:hover,
+.suggestion-box:has(.suggestion-content:focus),
+.suggestion-box:has(.suggestion-content:valid){
+    height: 40svh;
+    width: 60svw;
+}
+
+.suggestion-content{
+    height: 100%;
+    width: 100%;
+    z-index: 2;
+    padding-block: 2em;
+    box-sizing: border-box;
+    font-size: 2ch;
+}
+
+.sb-char-counter{
+    font-size: 1.5ch;
+    position: absolute;
+    right: .4em;
+    bottom: 0;
+    z-index: 2;
+}
+
+/* suggestion wave */
+.content-wave-svg{
+    z-index: 1;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    transition: bottom .3s linear;
+}
+
+.ocean-floor{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    background-color: #8a0000;
+    opacity: 0.5;
+    height: 0%;
+    width: 100%;
+    transition: height .3s linear;
+}

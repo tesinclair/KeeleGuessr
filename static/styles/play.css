@@ -1,0 +1,154 @@
+@media only screen and (min-width: 768px){
+
+    #map { 
+        height: 400px; 
+        width: 400px;
+        transition: all 0.3s ease; 
+    }
+    .guess-zone{
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        margin-bottom: 2em;
+        margin-right: 1em;
+    }
+
+    .scores{
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5em;
+        position: relative;
+    }
+    .scores > *{
+        transition: transform .5s ease;
+    }
+
+    .scores::before{
+        content: '';
+        position: absolute;
+        background-color: var(--bg-color-normal);
+        width: 10px;
+        right: 1px;
+        height: 101%;
+        z-index: 2;
+    }
+    .scores::after{
+        content: '';
+        position: absolute;
+        background-color: rgba(200, 200, 200, 1);
+        filter: blur(2px);
+        width: 2px;
+        height: 100%;
+        right: 0;
+        z-index: 1;
+    }
+    .current-score{
+        font-size: 8ch;
+    }
+    .highscore{
+        font-size: 3ch;
+    }
+
+    .photo{
+        height: 95svh;
+        width: 100svw;
+        text-align: center;
+        flex: 9;
+    }
+
+    .game{
+        position: relative;
+        display: flex;
+    }
+
+    .guess-zone:hover #map{
+        height: 600px;
+        width: 600px;
+    }
+
+}
+
+.photo img{
+    max-height: 100%;
+    max-width: 100%;
+}
+
+.guess-zone #submitGuess,
+.guess-zone #resultArea{
+    display: none;
+}
+
+.guess-zone.has-guess #submitGuess{
+    display: block;
+    padding: 10px 20px;
+    background: #007cba;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.guess-zone.has-guess #submitGuess:hover{
+    background: #005a87;
+}
+
+.guess-zone.has-result #resultArea{
+    display: block;
+    background: rgba(80, 80, 80, 0.9);
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    color: var(--font-color-normal);
+}
+
+.result-cont{
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+}
+
+
+@media only screen and (max-width: 768px){
+
+    .game{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .photo{
+        height: 40svh;
+        width: 100svw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+    }
+    
+    .guess-zone #map{
+        height: 300px;
+        width: 300px;
+    }
+
+    .guess-zone{
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        margin-bottom: 2em;
+        margin-right: 1em;
+        justify-content: center;
+        align-items: center;
+    } 
+}
+
+

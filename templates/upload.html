@@ -1,26 +1,40 @@
 {% extends "layout.html" %}
 {% block content %}
-  <h3 style="text-align:center; font-size:5ch;">Upload Campus Photo</h3>
+  <h3 style="text-align:center; font-size:4ch;">Upload Campus Photo</h3>
   
   <div>
-    <form class="upload-form" method="post" enctype="multipart/form-data">
-      <div>
+      <form class="upload-form" method="post" action="{{url_for('admin')}}" enctype="multipart/form-data">
+      <div class="uf-image-map">
         <input id="photo" type="file" name="photo" accept="image/*" required>
+        <div class="hidden photo-card" id="photo-card">
+            <img class="photo-img" id="photo-img" src="">
+            <button type="button" id="btn-swap-photo" class="btn admin">SWAP</button>
+        </div>
         <div id="upload-map"></div>
       </div>
       <div class="coord-manual-box hidden" id="cm-box">
-          <input type="number" name="lat" id="lat-man">
-          <input type="number" name="lng" id="lng-man">
-          <button class="btn" id="man-btn">Set Coords</button>
+          <input type="text" name="lat-man" id="lat-man">
+          <input type="text" name="lng-man" id="lng-man">
+          <button type="button" class="btn admin" id="man-btn">Set Coords</button>
       </div>
       <div class="auto-coord-validation hidden" id="ac-validator">
-          <button type="button" id="manual-coords-btn" class="btn" onclick="manualCoords()">
+          <button type="button" id="manual-coords-btn" class="btn admin" onclick="manualCoords()">
               MANUAL
           </button>
       </div>
       <input type="hidden" name="lat" id="lat">
       <input type="hidden" name="lng" id="lng">
-      <button id="pu-submit-btn" class="btn" type="submit" id="form-submit">Upload</button>
+      <div style="display:flex;gap:3em;flex-direction:row; justify-content: center; align-items: center;">
+      <div class="hp-toggle EASY" id="hp-difficulty-toggle">
+        <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
+        <input type="hidden" name="difficulty" id="difficulty">
+      </div>
+      <div class="hp-toggle EASY" id="hp-location-toggle-admin">
+        <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
+        <input type="hidden" name="location" id="location">
+      </div>
+      </div>
+      <button id="pu-submit-btn" class="btn admin" type="submit">UPLOAD</button>
     </form>
   </div>
 {% endblock %}
@@ -43,6 +57,7 @@
     let marker = null;
     map.on('click', function(e){
         if(marker) map.removeLayer(marker);
+        console.log(lat_man, lat);
         lat_man.value = e.latlng.lat;
         lng_man.value = e.latlng.lng;
         lat.value = e.latlng.lat;
@@ -59,13 +74,36 @@
         document.getElementById('ac-validator').classList.add('hidden');
     }
 
-    document.getElementById('photo').addEventListener('change', async (e) => {
+
+    const photoCard = document.getElementById('photo-card');
+    const photoImg = document.getElementById('photo-img');
+    const photoUpload = document.getElementById('photo');
+
+    function showPhoto(file){
+        if (!file){
+            photoImg.src = "";
+            photoCard.classList.add('hidden');
+            photoUpload.classList.remove('hidden');
+        }
+        
+        photoImg.src = URL.createObjectURL(file);
+        photoUpload.classList.add('hidden');
+        photoCard.classList.remove('hidden');
+    }
+
+    document.getElementById('btn-swap-photo').addEventListener('onclick', () => {
+        photoCard.classList.add('hidden');
+        photoUpload.classList.remove('hidden');
+    });
+
+    photoUpload.addEventListener('change', async (e) => {
+        showPhoto(e.target.files[0], e.target);
         const file = e.target.files[0];
         if (!file) return;
 
         try{
             const metadata = await exifr.gps(file);
-            console.log(metadata.latitude, lat, lng);
+            console.log(metadata);
             if (metadata){
                 if (marker) map.removeLayer(marker);
                 lat.value = metadata.latitude;
@@ -88,6 +126,98 @@
         lng.value = lng_man.value;
         marker = L.marker([lat.value, lng.value]).addTo(map);
     });
+
+        const difficultyToggle = document.getElementById('hp-difficulty-toggle');
+        const locationToggle = document.getElementById('hp-location-toggle-admin');
+        const difficultyInput = document.getElementById('difficulty');
+        const locationInput = document.getElementById('location');
+
+        const UP = 1;
+        const DOWN = -1;
+
+        // Defaults
+        let configOpts = { 
+            location: {
+                KEELE: 1,
+                ELSTEAD: 2
+            },
+            difficulty: {
+                EASY: 1,
+                NORMAL: 2,
+                HARD: 3
+            }
+        };
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+
+            if (!opts){
+                clientFlash("Network issue. Using Default Options", "warning");
+                return;
+            }
+            
+            configOpts.location = opts.location
+            configOpts.difficulty = Object.fromEntries(
+                Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
+                );
+        });
+
+        let locationScrollPos = -1;
+        let difficultyScrollPos = -1;
+
+        let numScrolls = 0;
+        locationToggle.addEventListener('wheel', (e) => {
+            if (numScrolls % 2 !== 0){
+                numScrolls++;
+                return;
+            }
+            // DOWN is when the hand scrolls down
+            let direction = getDirection(e.wheelDelta);
+            if (direction == 0) return;
+
+            locations = Object.keys(configOpts.location);
+
+            let locationChoice;
+            [locationScrollPos, locationChoice] = scrollObject(
+                document.getElementById('hp-location-toggle-text'),
+                direction,
+                locationScrollPos,
+                locations,
+                locations.length
+            );
+            numScrolls = ++numScrolls % 2;
+
+            locationInput.value = configOpts.location[locationChoice];
+        });
+
+        difficultyToggle.addEventListener('wheel', (e) => {
+            if (numScrolls % 2 !== 0){
+                numScrolls++;
+                return;
+            }
+            // DOWN is when the hand scrolls down
+            let direction = getDirection(e.wheelDelta);
+            if (direction == 0) return;
+
+            difficultys = Object.keys(configOpts.difficulty);
+
+            let difficultyChoice;
+            [difficultyScrollPos, difficultyChoice] = scrollObject(
+                document.getElementById('hp-difficulty-toggle-text'),
+                direction,
+                difficultyScrollPos,
+                difficultys,
+                difficultys.length
+            );
+            
+            difficultyToggle.className = "hp-toggle";
+            difficultyToggle.classList.add(difficultyChoice);
+
+            numScrolls = ++numScrolls % 2;
+
+            difficultyInput.value = configOpts.difficulty[difficultyChoice];
+        });
+
 
 </script>
 {% endblock %}

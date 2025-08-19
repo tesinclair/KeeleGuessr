@@ -1,0 +1,91 @@
+@import "404.css";
+@import "flashes.css";
+@import "leaflet.css";
+@import "seen_all_photos.css";
+@import "admin_suggestions.css";
+@import "form.css";
+@import "nav.css";
+@import "admin_upload.css";
+@import "home.css";
+@import "play.css";
+@import "user_suggestions.css";
+
+:root{
+    --font-color-normal: rgb(220, 220, 220);
+    --font-color-hover: rgb(150, 150, 150);
+
+    --bg-color-normal: rgb(10, 10, 10);
+    
+    --btn-color-admin: rgb(0, 120, 0);
+    --btn-color-user: rgb(0, 0, 120);
+    --btn-color-admin-hover: rgb(0, 80, 0);
+    --btn-color-user-hover: rgb(0, 0, 80);
+}
+
+body{
+    position: relative;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    max-width: 100svw;
+    overflow: hidden;
+    background-color: var(--bg-color-normal);
+    color: var(--font-color-normal);
+}
+
+.hidden{
+    display: none !important;
+}
+
+/* height and width and fontsize are custom*/
+.btn{
+    /* default width, height and fontsize */
+    width: 8em;
+    height: 4em;
+    font-size: 1.5ch;
+    /* -------------------- */
+    border-radius: 1.5em;
+    color: var(--font-color-normal);
+    font-weight: bold;
+    padding-inline: 1em;
+    transition: all .3s ease;
+}
+@media screen and (max-width: 768px){
+    .btn{
+        font-size: 2ch;
+        width: 6em;
+        height: 3em;
+    }
+}
+.btn:hover,
+.btn:focus{
+    scale: 1.05;
+    color: var(--font-color-hover);
+}
+
+.admin:is(.btn){
+    background-color: var(--btn-color-admin);
+    border: 2px solid var(--btn-color-admin);
+}
+.admin:is(.btn):hover,
+.admin:is(.btn):focus{
+    background-color: var(--btn-color-admin-hover);
+}
+
+.user:is(.btn){
+    background-color: var(--btn-color-user);
+    border: 2px solid var(--btn-color-user);
+}
+.user:is(.btn):hover,
+.user:is(.btn):focus{
+    background-color: var(--btn-color-user-hover);
+}
+
+a:is(.btn){
+    text-decoration: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1ch;
+    text-align: center;
+}

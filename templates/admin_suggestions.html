@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+    <section class="admin-suggestions-root">
+        <h2>Suggestions</h2>
+        <div class="suggestion-cont">
+            {% for suggestion, username in suggestions %}
+                <div class="suggestion-card">
+                    <span class="suggestion-username"> {{ username }} </span>
+                    <span class="suggestion-content"> {{ suggestion.content }} </span>
+                    <div class="suggestion-vote-count"> {{ suggestion.votes }} </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}
+
+

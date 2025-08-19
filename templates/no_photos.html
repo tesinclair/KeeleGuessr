@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% block content %}
   <div>
-    <h3>No photos yet</h3>
-    <p>This either means there is an error with the server or we're reuploading some photos.</p>
-    <h4>We should be back up soon!</h4>
+    <h3>No Photos</h3>
+    <p>Sorry, it looks like we don't have any photos for {{ session.get('location_text') }} yet</p>
+    <p>We should be back up soon!</p>
   </div>
 {% endblock %}
 

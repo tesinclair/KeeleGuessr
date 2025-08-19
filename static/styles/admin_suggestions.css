@@ -1,0 +1,14 @@
+.admin-suggestions-root{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.suggestion-cont{
+    display: grid;
+    grid: repeat(5);
+}
+.suggestion-card{
+    height: 5em;
+}

@@ -5,23 +5,36 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>KeeleGuessr</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.min.js"></script>
+    <script src="{{url_for('static', filename='js/clientFlash.js')}}"></script>
+    <script src="{{url_for('static', filename='js/getConfigOpts.js')}}"></script>
+    <script src="{{url_for('static', filename='js/getDirection.js')}}"></script>
+    <script src="{{url_for('static', filename='js/scrollObject.js')}}"></script>
   </head>
   <body>
     <nav class="nav">
+        {% if session.get('location') %}
         <a class="nav-header" href="{{ url_for('play') }}">Keele Guesser</a>
+        {% else %}
+        <a class="nav-header" href="{{ url_for('home') }}">Keele Guesser</a>
+        {% endif %}
         <div class="nav-list">
+            {% if session.get('location') %}
+            <a href="{{ url_for('home') }}">Settings</a>
+            {% endif %}
             {% if session.admin_logged_in %}
                 <a href="{{ url_for('admin') }}">Admin</a>
+                <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
             {% elif session.user_logged_in %}
                 <a href="{{ url_for('suggestion') }}">Add Suggestion</a>
                 <a href="{{ url_for('user_logout') }}">Logout</a>
             {% else %}
+                {% if request.path != url_for('user_login') %}
                 <a href="{{ url_for('user_login') }}">Login</a> 
-                <a href="{{ url_for('user_create') }}">Create</a>
+                {% endif %}
             {% endif %}
         </div>
     </nav>
@@ -30,41 +43,44 @@
       {% if messages %}
         {% for category, msg in messages %}
         <div class="flash {{ category }}" id="flash-div">
-              {% if category == "danger" %}
-              <span class="flash-msg" style="color: red;"> {{msg}} </span>
-              {% elif category == "warning" %}
-              <span class="flash-msg" style="color: darkorange;"> {{msg}} </span>
-              {% elif category == "success" %}
-              <span class="flash-msg" style="color: green;"> {{msg}} </span>
-              {% else %}
-              <span class="flash-msg" style="color: lightblue;"> {{msg}} </span>
-              {% endif %}
-              <button class="flash-btn" type="button" onclick="killFlash()">⨯</button>
+              <span class="flash-msg"> {{msg}} </span>
+              <button class="flash-btn" type="button" onclick="killFlash('flash-div')">⨯</button>
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
+    <div class="flash hidden" id="flash-client-div">
+          <span id="flash-client-msg-span" class="flash-msg">  </span>
+          <button class="flash-btn" type="button" onclick="killFlash('flash-client-div')">⨯</button>
+    </div>
+
     {% block content %}{% endblock %}
 
     {% block scripts %}{% endblock %}
   </body>
-  <script>
-      flash = document.getElementById('flash-div');
+<script>
+    flash = document.getElementById('flash-div');
 
-      requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
         if (flash){
             flash.style.right = 3 + "em";
         }
-      })
+    })
 
-      function killFlash(){
-          // .3s transition
-          flash.style.right = `-${flash.offsetWidth}px`;
-          setTimeout(() => {
-              flash.classList.add('hidden');
-          }, 300);
-      }
-  </script>
+    function killFlash(id){
+        flashEl = document.getElementById(id);
+        if (!flashEl){
+            console.error("Kill Flash called with bad id: ", id);
+            return;
+        }
+        // .3s transition
+        flashEl.style.right = `-${flashEl.offsetWidth}px`;
+
+        setTimeout(() => {
+            flashEl.classList.add('hidden');
+        }, 300);
+    }
+</script>
 </html>
 
