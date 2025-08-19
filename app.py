@@ -25,12 +25,13 @@ class Location(IntEnum):
 
 class Difficulty(IntEnum):
     EASY = 1
-    NORMAL = 2
+    MEDIUM = 2
     HARD = 3
-    VERYHARD = 4
+    HARDER = 4
+    HARDEST = 5
 
 DEFAULT_LOCATION = Location.ELSTEAD;
-DEFAULT_DIFFICULTY = Difficulty.NORMAL;
+DEFAULT_DIFFICULTY = Difficulty.MEDIUM;
 
 # --- App and DB setup ---
 app = Flask(__name__, static_folder='static')
@@ -232,7 +233,7 @@ def session_config(location, difficulty):
 
     # on first login neither are set so always true
     if session.get('location') != location or session.get('difficulty') != difficulty:
-        session['score'] = 0
+        session['current_score'] = 0
         session['seen_photos'] = []
     session['location'] = location
     session['difficulty'] = difficulty
@@ -369,11 +370,10 @@ def guess():
     # ================================================
 
     temp_highscore = 0;
-    if points == 5000:
-        session['current_score'] = session.get('current_score') + 1;
-        if session.get('user_logged_in') and session.get('user_highscore') < session.get('current_score'):
-            session['user_highscore'] = session.get('current_score'); 
-            temp_highscore = session.get('user_highscore')
+    session['current_score'] = session.get('current_score') + int(points);
+    if session.get('user_logged_in') and session.get('user_highscore') < session.get('current_score'):
+        session['user_highscore'] = session.get('current_score'); 
+        temp_highscore = session.get('user_highscore')
         
     return jsonify({
         "distance_m": round(dist_m,1),
@@ -494,7 +494,8 @@ def admin():
         diff = request.form.get('difficulty')
 
         print(lat, lng, loc, diff)
-        if not (loc and diff):
+
+        if (not loc) and (not diff):
             flash("Using location and difficulty defaults", "info");
             loc = DEFAULT_LOCATION;
             diff = DEFAULT_DIFFICULTY;

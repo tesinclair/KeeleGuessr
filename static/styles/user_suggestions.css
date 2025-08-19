@@ -1,0 +1,21 @@
+/* suggestion wave */
+.content-wave-svg{
+    z-index: 1;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    transition: bottom .3s linear;
+}
+
+.ocean-floor{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    background-color: #5cb5e1;
+    opacity: 0.5;
+    height: 0%;
+    width: 100%;
+    transition: height .3s linear;
+}

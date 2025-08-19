@@ -53,29 +53,37 @@
 .EASY:hover{
     background-color: rgb(0, 80, 0);
 }
-.NORMAL{
-    background-color: rgb(0, 0, 120);
-    border: solid 2px rgb(0, 0, 120);
+.MEDIUM{
+    background-color: rgb(120, 120, 0);
+    border: solid 2px rgb(120, 120, 0);
 }
-.NORMAL:focus,
-.NORMAL:hover{
-    background-color: rgb(0, 0, 80);
+.MEDIUM:focus,
+.MEDIUM:hover{
+    background-color: rgb(80, 80, 0);
 }
 .HARD{
-    background-color: rgb(120, 0, 0);
-    border: solid 2px rgb(120, 0, 0);
+    background-color: rgb(120, 75, 0);
+    border: solid 2px rgb(120, 75, 0);
 }
 .HARD:focus,
 .HARD:hover{
+    background-color: rgb(80, 50, 0);
+}
+.HARDER{
+    background-color: rgb(120, 0, 0);
+    border: solid 2px rgb(120, 0, 0);
+}
+.HARDER:focus,
+.HARDER:hover{
     background-color: rgb(80, 0, 0);
 }
-.VERYHARD{
-    background-color: rgb(0, 0, 0);
-    border: solid 2px rgb(0, 0, 0);
+.HARDEST{
+    background-color: rgb(40, 0, 0);
+    border: solid 2px rgb(40, 0, 0);
 }
-.VERYHARD:focus,
-.VERYHARD:hover{
-    background-color: rgb(0, 0, 0);
+.HARDEST:focus,
+.HARDEST:hover{
+    background-color: rgb(20, 0, 0);
 }
 
 .hp-toggle::after{

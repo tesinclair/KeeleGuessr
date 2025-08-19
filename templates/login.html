@@ -12,7 +12,9 @@
       </div>
       <button class="btn user">LOGIN</button>
     </form>
+    {% if request.path != url_for('admin_login') %}
     <a href="{{url_for('user_create')}}" class="btn user" style="height: 3em; width: 6em; margin-top: 3em; font-size: 1.5ch;">CREATE ACCOUNT</a>
+    {% endif %}
   </div>
 {% endblock %}
 

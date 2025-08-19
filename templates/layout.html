@@ -21,7 +21,7 @@
         <a class="nav-header" href="{{ url_for('home') }}">Keele Guesser</a>
         {% endif %}
         <div class="nav-list">
-            {% if session.get('location') %}
+            {% if session.get('location') and request.path != url_for('home') %}
             <a href="{{ url_for('home') }}">Settings</a>
             {% endif %}
             {% if session.admin_logged_in %}
