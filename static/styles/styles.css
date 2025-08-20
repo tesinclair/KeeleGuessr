@@ -10,6 +10,7 @@
 @import "play.css";
 @import "user_suggestions.css";
 @import "user_account.css";
+@import "delete_user.css";
 
 :root{
     --font-color-normal: rgb(220, 220, 220);
@@ -89,4 +90,23 @@ a:is(.btn){
     align-items: center;
     font-size: 1ch;
     text-align: center;
+}
+
+.delete-btn{
+    /* default width, height and fontsize */
+    font-size: 1.5ch;
+    padding: 1em;
+    /* -------------------- */
+    border-radius: 1.5em;
+    color: var(--font-color-normal);
+    font-weight: bold;
+    transition: all .3s ease;
+    background-color: rgb(100, 0, 0);
+    border: 2px solid rgb(100, 0, 0);
+}
+.delete-btn:hover,
+.delete-btn:focus{
+    background-color: rgb(60, 0, 0);
+    color: var(--font-color-hover);
+    scale: 0.9;
 }

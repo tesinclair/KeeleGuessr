@@ -78,7 +78,14 @@
 .HARDEST:hover{
     background-color: rgb(20, 0, 0);
 }
-
+.IMPOSSIBLE{
+    background-color: rgb(10, 10, 10);
+    border: solid 2px rgb(10, 10, 10);
+}
+.IMPOSSIBLE:focus,
+.IMPOSSIBLE:hover{
+    background-color: rgb(0, 0, 0);
+}
 .DEFAULT{
     background-color: rgb(0, 0, 120);
     border: solid 2px rgb(0, 0, 120);

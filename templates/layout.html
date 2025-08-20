@@ -41,9 +41,17 @@
             </a>
             {% endif %}
             {% if session.admin_logged_in %}
+                {% if request.path == url_for('admin') %}
+                <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
+                <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% elif request.path == url_for('admin_suggestions') %}
+                <a href="{{ url_for('admin') }}">Admin</a>
+                <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% else %}
                 <a href="{{ url_for('admin') }}">Admin</a>
                 <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% endif %}
             {% elif session.user_logged_in %}
                 <a href="{{ url_for('account') }}">
                     <svg xmlns="http://www.w3.org/2000/svg"

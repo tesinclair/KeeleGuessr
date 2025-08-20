@@ -106,8 +106,9 @@ def create_user(username, password, score=0):
         s.close()
         raise ValueError("Usename already exists")
     h = generate_password_hash(password)
-    a = User(username=username, password_hash=h, highscore=score)
+    a = User(username=username, password_hash=h)
     s.add(a); s.commit(); s.close()
+    return a
 
 def add_suggestion(user_id, content):
     s = db_session()
@@ -121,10 +122,19 @@ def add_suggestion(user_id, content):
     a = Suggestion(content=content, user_id=user_id)
     s.add(a); s.commit(); s.close()
 
+def delete_user():
+    s = db_session()
+
+    user = s.query(User).filter_by(username=session.get('user_username')).first()
+    if not user:
+        return; # no need to panic, if the user doesn't exist, we won't worry
+
+    s.delete(user); s.commit(); s.close()
+
 def update_highscore():
     s = db_session()
     
-    user = s.query(User).filter_by(username=session.get('user_username')).first();
+    user = s.query(User).filter_by(username=session.get('user_username')).first()
     if not user:
         print("DEBUG: in update_highscore with no user")
         return 0;
@@ -169,8 +179,6 @@ def update_highscore():
     s.commit(); s.close()
 
     return ret
-
-
 
 def cli_login_required(fn):
     from functools import wraps
@@ -266,7 +274,26 @@ def index():
 
 @app.route('/home')
 def home():
+    if session.get('user_logged_in'):
+        s = db_session()
+        user = s.query(User).filter_by(username=session.get('user_username')).first()
+        if not user:
+            return redirect(url_for('user_logout'));
     return render_template('home.html');
+
+@app.route('/user/delete', methods=['GET', 'POST'])
+def user_delete():
+    if request.method == "POST":
+        if request.form.get('username') == session.get("user_username"):
+            delete_user()
+            flash("User deleted", "success")
+            return redirect(url_for('home'))
+        else:
+            flash("Put in your correct username", "danger")
+            return redirect(url_for('user_delete'))
+
+    return render_template('delete_user.html')
+    
 
 @app.route('/get/configopts', methods=['GET'])
 def get_config_opts():
@@ -354,7 +381,7 @@ def account():
     if not user:
         s.close()
         flash("User not found.", "danger")
-        return redirect(url_for('login'))
+        return redirect(url_for('user_login'))
 
     suggestions = [(x.content, x.votes) for x in \
                         s.query(Suggestion).filter_by(user_id=user.id).all()]
@@ -495,22 +522,12 @@ def user_login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
-        current_score = session.get('current_score')
-        if not current_score:
-            current_score = 0;
-
         s = db_session()
         user = s.query(User).filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             session['user_logged_in'] = True
             session['user_username'] = username
-            session['current_score'] = current_score
-
-            if current_score > user.highscore:
-                user.highscore = current_score
-                s.commit(); s.close()
-
-            session['user_highscore'] = user.highscore
+            update_highscore()
             flash('Logged in successfully', 'success')
             nxt = request.args.get('next') or url_for('home')
             return redirect(nxt)
@@ -524,12 +541,14 @@ def user_create():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         try:
-            create_user(username, password, score=session.get('current_score'));
+            user = create_user(username, password);
             flash('Account Created', 'success')
+            session['user_logged_in'] = True
+            session['user_username'] = user.username
+            update_highscore()            
             return redirect(url_for('home'))
         except ValueError as e:
             flash('Failed to create account. Username probably taken.', 'danger')
-
     return render_template('create_user.html')
 
 @app.route('/get/username/<username>')
