@@ -8,6 +8,9 @@
         {% endif %}
     </div>
     <div class="photo">
+        {% if session.get('show_all_photos') %}
+        <span class="difficulty-text-play"> {{ difficulty }} </span>
+        {% endif %}
         <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="Photo isn't available now, please try again later.">
     </div>
     <div class="guess-zone">
@@ -20,6 +23,14 @@
     </div>
 </section>
 <script>
+    photoEl = document.querySelector('.photo');
+    photoEl.addEventListener('click', () => {
+        if (window.innerWidth < 768){
+            photoEl.classList.toggle('fullscreen-picture'); 
+            document.getElementById('map').classList.toggle('hidden');
+            document.querySelector('.difficulty-text-play').classList.toggle('hidden');
+        }
+    });
 
     const currScore = document.getElementById('curr-score');
     const highscore = document.getElementById('highscore');

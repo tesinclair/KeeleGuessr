@@ -149,7 +149,7 @@
         };
 
         document.addEventListener("DOMContentLoaded", async () => {
-            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+            const opts = await getInfo("{{url_for('get_config_opts')}}")
 
             if (!opts){
                 clientFlash("Network issue. Using Default Options", "warning");

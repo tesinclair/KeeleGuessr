@@ -9,6 +9,7 @@
 @import "home.css";
 @import "play.css";
 @import "user_suggestions.css";
+@import "user_account.css";
 
 :root{
     --font-color-normal: rgb(220, 220, 220);

@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'geocampus.db')
+DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
 SECRET_KEY = os.environ.get('GEO_SECRET') or 'change-this-secret-in-prod'
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -28,6 +28,7 @@ class Difficulty(IntEnum):
     HARD = 3
     HARDER = 4
     HARDEST = 5
+    IMPOSSIBLE = 6
 
 DEFAULT_LOCATION = Location.ELSTEAD;
 DEFAULT_DIFFICULTY = Difficulty.MEDIUM;
@@ -64,7 +65,15 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    highscore = Column(Integer, default=0)
+
+class Highscore(Base):
+    __tablename__ = "highscores"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    difficulty_id = Column(Integer)
+    difficulty_name = Column(String(32))
+    highscore = Column(Integer, nullable=False, default=0)
+    perfect_streak = Column(Integer, nullable=False, default=0)
 
 class Suggestion(Base):
     __tablename__ = 'suggestions'
@@ -111,6 +120,57 @@ def add_suggestion(user_id, content):
 
     a = Suggestion(content=content, user_id=user_id)
     s.add(a); s.commit(); s.close()
+
+def update_highscore():
+    s = db_session()
+    
+    user = s.query(User).filter_by(username=session.get('user_username')).first();
+    if not user:
+        print("DEBUG: in update_highscore with no user")
+        return 0;
+
+    # get the highscore for this difficulty
+    if session.get('show_all_photos'):
+        highscore = s.query(Highscore).filter_by(user_id=user.id, difficulty_id=None).first()
+    else:
+        highscore = s.query(Highscore).filter_by(user_id=user.id, difficulty_id=session.get('difficulty')).first()
+
+    # No highscore for this difficulty
+    if not highscore:
+        difficulty_name = None
+        difficulty_id = None
+        for diff in Difficulty:
+            if diff == session.get('difficulty'):
+                difficulty_name = diff.name
+                difficulty_id = diff
+
+        a = Highscore(
+                user_id=user.id,
+                difficulty_id=difficulty_id,
+                difficulty_name=difficulty_name,
+                highscore=session.get('current_score'),
+                perfect_streak=session.get('current_streak')
+                )
+        s.add(a); s.commit(); s.close();
+        return session.get('current_score'), session.get('current_streak');
+
+    ret = []
+    if highscore.highscore < session.get('current_score'):
+        highscore.highscore = session.get('current_score')
+        ret.append(session.get('current_score'))
+    else:
+        ret.append(highscore.highscore) 
+    if highscore.perfect_streak < session.get('current_streak'):
+        highscore.perfect_streak = session.get('current_streak')
+        ret.append(session.get('current_streak'))
+    else:
+        ret.append(highscore.perfect_streak)
+
+    s.commit(); s.close()
+
+    return ret
+
+
 
 def cli_login_required(fn):
     from functools import wraps
@@ -221,52 +281,89 @@ def get_config_opts():
 
     return jsonify(data), 200
 
-@app.route('/sessioncfg/<int:location>/<int:difficulty>')
-def session_config(location, difficulty):
+@app.route('/sessioncfg/<int:location>/<int:difficulty>/<int:show_all_photos>')
+def session_config(location, difficulty, show_all_photos):
     if location not in Location:
         flash("Please select a valid location", "warning")
         return redirect(url_for('home'))
     if difficulty not in Difficulty:
         flash("Please select a valid difficulty", "warning")
         return redirect(url_for('home'))
+    if show_all_photos not in [0, 1]:
+        flash("Please don't take the piss", "danger")
+        return redirect(url_for('home'))
 
     # on first login neither are set so always true
     if session.get('location') != location or session.get('difficulty') != difficulty:
         session['current_score'] = 0
-        session['seen_photos'] = []
+        session['current_streak'] = 0
+        session['photo_list'] = None
+        session['current_photo_index'] = 0
     session['location'] = location
     session['difficulty'] = difficulty
+    session['show_all_photos'] = show_all_photos
     for loc in Location:
         if loc == location: 
             session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
+            break;
 
     return redirect(url_for('play'))
-
 
 @app.route('/play')
 def play():
     # Randomize selection server-side: pick one random photo
     s = db_session()
-    print(session.get('difficulty'))
-    print(s.query(func.count(Photo.id)).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).scalar())
-    if len(session.get('seen_photos')) >= s.query(func.count(Photo.id)).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).scalar():
+    if not session.get('photo_list'):
+        if session.get('show_all_photos'):
+            session['photo_list'] = [x[0] for x in s.query(Photo.id).filter_by(location=session.get('location')).order_by(func.random()).all()]
+        else: 
+            session['photo_list'] = [x[0] for x in s.query(Photo.id).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).all()]
+
+        session['current_photo_index'] = 0
+
+    if session.get('current_photo_index') >= len(session.get('photo_list')):
         s.close()
 
-        if len(session.get('seen_photos')) == 0: # if they haven't seen any photos then there prolly none there ay
+        if len(session.get('photo_list')) == 0: # if they haven't seen any photos then there prolly none there ay
             return render_template('no_photos.html')
 
         return redirect(url_for('seen_all_photos'))
 
-    photo = s.query(Photo).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).first()
-    print(photo);
-    while photo.id in session.get('seen_photos'):
-        photo = s.query(Photo).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).first()
+    photo = s.query(Photo).filter_by(id=session.get('photo_list')[session.get('current_photo_index')]).first()    
+
+    if not photo:
+        flash("An error has occurred, please try again later", "danger");
+        s.close()
+        return redirect(url_for('home'))
+
+    for diff in Difficulty:
+        if diff == photo.difficulty:
+            difficulty = diff.name;
 
     s.close()
 
-    session['seen_photos'].append(photo.id)
+    session['current_photo_index'] = session.get('current_photo_index') + 1;
 
-    return render_template('play.html', photo=photo)
+    return render_template('play.html', photo=photo, difficulty=difficulty)
+
+@app.route('/user', methods=['GET'])
+@user_login_required
+def account():
+    s = db_session();
+    user = s.query(User).filter_by(username=session.get('user_username')).first()
+    if not user:
+        s.close()
+        flash("User not found.", "danger")
+        return redirect(url_for('login'))
+
+    suggestions = [(x.content, x.votes) for x in \
+                        s.query(Suggestion).filter_by(user_id=user.id).all()]
+
+    highscores = [(x.highscore, x.perfect_streak, x.difficulty_name) for x in \
+                        s.query(Highscore).filter_by(user_id=user.id).all()]
+
+    s.close()
+    return render_template('user_account.html', user=user, suggestions=suggestions, highscores=highscores)
 
 @app.route('/suggestion', methods=['GET', 'POST'])
 @user_login_required
@@ -338,13 +435,17 @@ def guess():
     # ============== Calculate Points ================
     MAX_POINTS = 5000
     if session.get('difficulty') == Difficulty.EASY:
+        WIN_DIST = 10
+    elif session.get('difficulty') == Difficulty.MEDIUM:
         WIN_DIST = 7
-    elif session.get('difficulty') == Difficulty.NORMAL:
-        WIN_DIST = 5
     elif session.get('difficulty') == Difficulty.HARD:
-        WIN_DIST = 3
-    elif session.get('difficulty') == Difficulty.VERYHARD:
+        WIN_DIST = 4
+    elif session.get('difficulty') == Difficulty.HARDER:
+        WIN_DIST = 2
+    elif session.get('difficulty') == Difficulty.HARDEST:
         WIN_DIST = 1
+    elif session.get('difficulty') == Difficulty.IMPOSSIBLE:
+        WIN_DIST = 0.1
     else:
         flash("Please select a difficulty to play", "Danger")
         return redirect(url_for('home'))
@@ -364,23 +465,20 @@ def guess():
         points = MAX_POINTS - (pts_per_m * dist_m)
 
     if points < 0:
-        points = 0;
+        points = 0
 
     # ================================================
 
-    temp_highscore = 0;
-    session['current_score'] = session.get('current_score') + int(points);
-    if session.get('user_logged_in') and session.get('user_highscore') < session.get('current_score'):
-        session['user_highscore'] = session.get('current_score'); 
-        temp_highscore = session.get('user_highscore')
-        
+    session['current_score'] = session.get('current_score') + int(points)
+    if session.get('user_logged_in'):
+        update_highscore()
+
     return jsonify({
         "distance_m": round(dist_m,1),
         "points": math.floor(points),
         "true_lat": true_lat,
         "true_lng": true_lng,
-        "current_score": session.get('current_score'),
-        'highscore': temp_highscore
+        "current_score": session.get('current_score')
     })
 
 @app.route('/user/logout')
@@ -389,7 +487,7 @@ def user_logout():
     session.pop('user_username', None)
     session.pop('user_highscore', None)
     flash('Logged out', 'info')
-    return redirect(url_for('play'))
+    return redirect(url_for('home'))
 
 @app.route('/user/login', methods=['GET', 'POST'])
 def user_login():
@@ -442,17 +540,18 @@ def get_username(username):
     if user:
         return jsonify({
             'isUser': True 
-        })
+        }), 200
     else:
         return jsonify({
             'isUser': False
-        })
+        }), 200
 
 @app.route('/reset')
 def reset_photos():
-    session['seen_photos'] = []
+    session['photo_list'] = None
+    session['current_photo_index'] = 0
     session['current_score'] = 0
-    return redirect(url_for('play'))
+    return redirect(url_for('home'))
 
 # --- Admin routes ---
 @app.route('/admin/login', methods=['GET','POST'])
@@ -477,7 +576,7 @@ def admin_logout():
     session.pop('admin_logged_in', None)
     session.pop('admin_username', None)
     flash('Logged out', 'info')
-    return redirect(url_for('play'))
+    return redirect(url_for('home'))
 
 @app.route('/admin', methods=['GET','POST'])
 @login_required

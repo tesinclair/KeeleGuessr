@@ -17,6 +17,10 @@
                 </div>
             </div>
         </div>
+            <div class="hp-checkbox">
+                <span class="hp-checkbox-text">Show all photos</span>
+                <input type="checkbox" id="hp-checkbox">
+            </div>
         <button onclick="configureSession()" class="btn user" id="hp-btn">PLAY</button>
     </div>
     <script>
@@ -24,6 +28,15 @@
         const locationToggle = document.getElementById('hp-location-toggle');
         const difficultyInput = document.getElementById('difficulty');
         const locationInput = document.getElementById('location');
+        let showAllPhotos = 0;
+
+        document.getElementById('hp-checkbox').addEventListener('change', (e)=>{
+            if (e.target.value){
+                showAllPhotos = 1;
+            }else{
+                showAllPhotos = 0;
+            }
+        });
 
         const UP = 1;
         const DOWN = -1;
@@ -42,7 +55,7 @@
         };
 
         document.addEventListener("DOMContentLoaded", async () => {
-            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+            const opts = await getInfo("{{url_for('get_config_opts')}}")
 
             if (!opts){
                 clientFlash("Network issue. Using Default Options", "warning");
@@ -57,8 +70,8 @@
         });
 
         function configureSession(){
-            const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1)}}";
-            window.location.href = sessioncfgUrl.replace("/0/1", `/${locationInput.value}/${difficultyInput.value}`);
+            const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1, show_all_photos=0)}}";
+            window.location.href = sessioncfgUrl.replace("/0/1/0", `/${locationInput.value}/${difficultyInput.value}/${showAllPhotos}`);
         }
 
         let locationScrollPos = -1;

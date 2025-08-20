@@ -15,7 +15,12 @@
     justify-content: center;
     align-items: center;
     gap: 2em;
-    margin-block: 5em;
+    margin-top: 3em;
+}
+
+.hp-checkbox{
+    margin-block: 2em;
+
 }
 
 @media screen and (max-width: 768px){
@@ -143,7 +148,6 @@
 }
 
 #hp-btn{
-    margin-top: 2em;
     height: 4em;
     width: 8em;
     font-size: 2ch;

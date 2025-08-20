@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="user-account-page">
+        <h2>{{ user.username[0].upper() + user.username[1:] }}</h2>
+                
+        <section class="uap-suggestions-sec">
+            <h3> Your Suggestions </h3>
+            <ul class="uap-suggestions">
+            {% for suggestion, votes in suggestions %}
+                <li class="uap-suggestion">
+                    <span class="uap-suggestion-text"> {{ suggestion }} </span>
+                    <span class="uap-suggestion-votes"> {{ votes }} </span>
+                </li>
+            {% endfor %}
+            </ul>
+            <a class="btn user" href="{{url_for('suggestion')}}">ADD SUGGESTION</a>
+        </section>
+        <section class="uap-highscores-sec">
+            <h3> Your Highscores </h3>
+            <table class="uap-scoretable">
+                <tr>
+                    <th> Difficulty </th>
+                    <th> Highscore </th>
+                    <th> Perfect Streak </th>
+                </tr>
+                {% for score, perfect-streak, difficulty in highscores %}
+                <tr class="uap-highscore">
+                    {% if not difficulty %}
+                    <td class="uap-highscore-difficulty DEFAULT">
+                        All Photos
+                    </td>
+                    <td class="uap-highscore-score"> {{score}} </td>
+                    <td class="uap-highscore-streak"> {{perfect-streak}} </td>
+                    {% else %}
+                    <td class="{{difficulty}} uap-highscore-difficulty">
+                        {{ difficulty[0] + difficulty[1:].lower() }}
+                    </td>
+                    <td class="uap-highscore-score"> {{ score }} </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+        </section>
+        <a class="btn user" href="{{url_for('user_logout')}}">LOGOUT</a>
+        <a class="uap-delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+    </div>
+   {% endblock %}
+
+
