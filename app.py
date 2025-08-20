@@ -21,7 +21,6 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 class Location(IntEnum):
     KEELE = 1
     ELSTEAD = 2
-    SETESDAL = 3
 
 class Difficulty(IntEnum):
     EASY = 1

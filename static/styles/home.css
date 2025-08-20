@@ -13,8 +13,15 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 2em;
     margin-block: 5em;
+}
+
+@media screen and (max-width: 768px){
+    .hp-config{
+        flex-direction: column;
+    }
 }
 
 #hp-location-toggle{
@@ -24,25 +31,6 @@
 #hp-location-toggle:focus,
 #hp-location-toggle:hover{
     background-color: rgb(0, 0, 80);
-}
-
-.hp-toggle{
-    position: relative;
-    height: 3em;
-    width: 15em;
-
-    border-radius: 5rem;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    transition: all .3s ease;
-}
-
-.hp-toggle:hover,
-.hp-toggle:focus{
-    scale: 1.1;
 }
 
 .EASY{
@@ -86,25 +74,66 @@
     background-color: rgb(20, 0, 0);
 }
 
-.hp-toggle::after{
+.DEFAULT{
+    background-color: rgb(0, 0, 120);
+    border: solid 2px rgb(0, 0, 120);
+}
+.DEFAULT:focus,
+.DEFAULT:hover{
+    background-color: rgb(0, 0, 80);
+}
+
+.hp-toggle{
+    height: 3em;
+    width: 15em;
+
+    border-radius: 5rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: all .3s ease;
+    position: relative;
+}
+
+.hp-toggle:hover,
+.hp-toggle:focus{
+    transform: scale(1.1);
+}
+
+.hp-toggle-cont{
+    position: relative;
+    isolation: isolate;
+}
+
+.hp-toggle-cont::before{
     content: 'scroll...';
+
     position: absolute;
     z-index: -1;
+    pointer-events: none;
+
     font-size: 1.3ch;
     height: 10px;
     width: 15px;
     top: 1em;
     left: 1em;
-    visibility: hidden;
+
     color: var(--font-color-hover);
     transition: all .3s ease;
 }
 
-.hp-toggle:hover::after,
-.hp-toggle:focus::after{
+@media screen and (max-width: 768px){
+    .hp-toggle-cont::before{
+        content: 'tap...';
+    }
+}
+
+.hp-toggle-cont:hover::before,
+.hp-toggle-cont:focus::before{
     top: -2em;
     left: 1em;
-    visibility: visible;
 }
 
 

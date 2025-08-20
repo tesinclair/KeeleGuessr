@@ -1,16 +1,20 @@
 {% extends "layout.html" %}
 {% block content %}
     <div class="home-page">
-        <h2>Keele Guessr!</h2>
+        <h2>KeeleGuesser!</h2>
         <p>Choose your location and difficulty and start guessing!</p>
         <div class="hp-config">
-            <div class="hp-toggle" id="hp-difficulty-toggle">
-                <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
-                <input type="hidden" name="difficulty" id="difficulty" value="2">
+            <div class="hp-toggle-cont">
+                <div class="hp-toggle DEFAULT" id="hp-difficulty-toggle">
+                    <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
+                    <input type="hidden" name="difficulty" id="difficulty" value="2">
+                </div>
             </div>
-            <div class="hp-toggle" id="hp-location-toggle">
-                <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
-                <input type="hidden" name="location" id="location" value="1">
+            <div class="hp-toggle-cont">
+                <div class="hp-toggle" id="hp-location-toggle">
+                    <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
+                    <input type="hidden" name="location" id="location" value="1">
+                </div>
             </div>
         </div>
         <button onclick="configureSession()" class="btn user" id="hp-btn">PLAY</button>

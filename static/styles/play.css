@@ -50,10 +50,10 @@
         z-index: 1;
     }
     .current-score{
-        font-size: 8ch;
+        font-size: 5ch;
     }
     .highscore{
-        font-size: 3ch;
+        font-size: 2ch;
     }
 
     .photo{
