@@ -1,3 +1,7 @@
+.game{
+    --streak-color: #f8fafc;
+}
+
 @media only screen and (min-width: 768px){
 
     #map { 
@@ -169,10 +173,20 @@
         justify-content: center;
         align-items: center;
     } 
-
-    .highscore{
-        display: none;
-    }
 }
 
+.current-streak{
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5ch;
+    color: var(--streak-color);
+
+    transition: rotate .1s ease;
+}
+
+.streak-lost{
+    transform: rotate(0, 45deg, 0);
+}
 

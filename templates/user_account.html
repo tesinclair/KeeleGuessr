@@ -3,13 +3,21 @@
     <div class="user-account-page">
         <h2>{{ user.username[0].upper() + user.username[1:] }}</h2>
                 
-        <section class="uap-suggestions-sec">
+        <div class="uap-flex-sections">
+        <section class="uap-suggestion-sec">
             <h3> Your Suggestions </h3>
             <ul class="uap-suggestions">
-            {% for suggestion, votes in suggestions %}
-                <li class="uap-suggestion">
-                    <span class="uap-suggestion-text"> {{ suggestion }} </span>
-                    <span class="uap-suggestion-votes"> {{ votes }} </span>
+            {% for suggestion, votes, id in suggestions %}
+                <li class="uap-suggestion card">
+                    <div class="uap-suggestion-text"> {{ suggestion }} </div>
+                    <div class="uap-suggestion-votes"> {{ votes }} 
+                    </div>
+                    <form method="post" action="{{url_for('delete_suggestion')}}">
+                        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="hidden" name="id" value="{{id}}">
+                        <button type="submit" class="delete-btn card-delete-btn no-grow">DELETE</button>
+                    </form>
                 </li>
             {% endfor %}
             </ul>
@@ -30,7 +38,7 @@
                         All Photos
                     </td>
                     <td class="uap-highscore-score"> {{score}} </td>
-                    <td class="uap-highscore-streak"> {{perfect-streak}} </td>
+                    <td class="uap-highscore-streak"> {{perfect_streak}} </td>
                     {% else %}
                     <td class="{{difficulty}} uap-highscore-difficulty">
                         {{ difficulty[0] + difficulty[1:].lower() }}
@@ -40,8 +48,11 @@
                 </tr>
                 {% endfor %}
         </section>
-        <a class="btn user" href="{{url_for('user_logout')}}">LOGOUT</a>
-        <a class="uap-delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+        </div>
+        <div class="uap-btn-cont">
+            <a class="btn user uap-logout-btn" href="{{url_for('user_logout')}}">LOGOUT</a>
+            <a class="uap-delete-btn delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+        </div>
     </div>
    {% endblock %}
 

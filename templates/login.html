@@ -3,6 +3,7 @@
   <div class="login">
     <h4>Login</h4>
     <form autocomplete="off" method="post">
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
         <input type="hidden" autocomplete="false" style="display:none;">
       <div class="uname">
         <input class="login-input" name="username" required>

@@ -4,9 +4,9 @@
         <h2>Suggestions</h2>
         <div class="suggestion-cont">
             {% for suggestion, username in suggestions %}
-                <div class="suggestion-card">
-                    <span class="suggestion-username"> {{ username }} </span>
-                    <span class="suggestion-content"> {{ suggestion.content }} </span>
+                <div class="card">
+                    <div class="suggestion-username"> {{ username }} </div>
+                    <div class="suggestion-content"> {{ suggestion.content }} </div>
                     <div class="suggestion-vote-count"> {{ suggestion.votes }} </div>
                 </div>
             {% endfor %}

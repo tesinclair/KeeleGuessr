@@ -4,6 +4,7 @@
     <h4>Create Account</h4>
     <form method="post" autocomplete="off">
       <input autocomplete="false" name="hidden" type="text" style="display:none;">
+      <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
       <div class="uname" id="uname-div">
         <input id="uname" class="create-input" name="username" required>
       </div>

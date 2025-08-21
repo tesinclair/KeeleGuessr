@@ -3,6 +3,7 @@
 <div class="add-suggestion">
     <h4>Suggestion Box</h4>
     <form autocomplete="off" method="post">
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
         <div class="suggestion-box">
             <textarea id="suggestion-box-input" class="suggestion-content input" name="suggestion-content" rows="4" cols="30" required></textarea>
             <span id="char-counter" class="sb-char-counter">511</span>

@@ -1,11 +1,20 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
+from flask_wtf.csrf import CSRFProtect, validate_csrf, CSRFError
+
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select, ForeignKey
-from sqlalchemy.orm import sessionmaker, declarative_base
-import os, datetime, math, random
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload
+
+import os, datetime, math 
 from PIL import Image
 from enum import IntEnum
+
+# ----- Todo list ------
+# TODO:
+#    - make account page hidden for mobile users
+#    - Make leaderboard on home page? or make leaderboard route
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,7 +22,8 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
-SECRET_KEY = os.environ.get('GEO_SECRET') or 'change-this-secret-in-prod'
+SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
+DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -30,13 +40,17 @@ class Difficulty(IntEnum):
     HARDEST = 5
     IMPOSSIBLE = 6
 
-DEFAULT_LOCATION = Location.ELSTEAD;
-DEFAULT_DIFFICULTY = Difficulty.MEDIUM;
+DEFAULT_LOCATION = Location.ELSTEAD
+DEFAULT_DIFFICULTY = Difficulty.MEDIUM
+MAX_PHOTOS = 15 # in session
+MAX_SUGGESTIONS = 100 # per user
 
 # --- App and DB setup ---
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = SECRET_KEY
+
+csrf = CSRFProtect(app)
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
@@ -66,6 +80,9 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
 
+    highscores = relationship("Highscore", back_populates="user", cascade="all, delete-orphan")
+    suggestions = relationship("Suggestion", back_populates="user")
+
 class Highscore(Base):
     __tablename__ = "highscores"
     id = Column(Integer, primary_key=True)
@@ -75,12 +92,16 @@ class Highscore(Base):
     highscore = Column(Integer, nullable=False, default=0)
     perfect_streak = Column(Integer, nullable=False, default=0)
 
+    user = relationship("User", back_populates="highscores")
+
 class Suggestion(Base):
     __tablename__ = 'suggestions'
     id = Column(Integer, primary_key=True)
     content = Column(String(512), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
     votes = Column(Integer, default=1)
+
+    user = relationship("User", back_populates="suggestions")
 
 Base.metadata.create_all(engine)
 
@@ -127,9 +148,21 @@ def delete_user():
 
     user = s.query(User).filter_by(username=session.get('user_username')).first()
     if not user:
-        return; # no need to panic, if the user doesn't exist, we won't worry
+        s.close()
+        return # no need to panic, if the user doesn't exist, we won't worry
 
-    s.delete(user); s.commit(); s.close()
+    deleted_user = s.query(User).filter_by(username="deleted_user").first()
+    if not deleted_user:
+        deleted_user = User(username="deleted_user", password_hash=generate_password_hash(DELETED_USER_PASS))
+        s.add(deleted_user); s.commit()
+
+    s.query(Suggestion).filter_by(user_id=user.id).update(
+            {Suggestion.user_id: deleted_user.id},
+            synchronize_session=False
+            )
+
+    s.delete(user)
+    s.commit(); s.close()
 
 def update_highscore():
     s = db_session()
@@ -137,23 +170,24 @@ def update_highscore():
     user = s.query(User).filter_by(username=session.get('user_username')).first()
     if not user:
         print("DEBUG: in update_highscore with no user")
-        return 0;
+        return 0
 
     # get the highscore for this difficulty
     if session.get('show_all_photos'):
-        highscore = s.query(Highscore).filter_by(user_id=user.id, difficulty_id=None).first()
+        diff = None
     else:
-        highscore = s.query(Highscore).filter_by(user_id=user.id, difficulty_id=session.get('difficulty')).first()
+        diff = session.get('difficulty')
+
+    highscore = next((x for x in user.highscores if x.difficulty_id == diff), None)
 
     # No highscore for this difficulty
     if not highscore:
         difficulty_name = None
         difficulty_id = None
         for diff in Difficulty:
-            if diff == session.get('difficulty'):
+            if diff == session.get('difficulty') and not session.get('show_all_photos'):
                 difficulty_name = diff.name
                 difficulty_id = diff
-
         a = Highscore(
                 user_id=user.id,
                 difficulty_id=difficulty_id,
@@ -161,9 +195,9 @@ def update_highscore():
                 highscore=session.get('current_score'),
                 perfect_streak=session.get('current_streak')
                 )
-        s.add(a); s.commit(); s.close();
-        return session.get('current_score'), session.get('current_streak');
-
+        s.add(a); s.commit(); s.close()
+        return session.get('current_score'), session.get('current_streak')
+    
     ret = []
     if highscore.highscore < session.get('current_score'):
         highscore.highscore = session.get('current_score')
@@ -275,11 +309,14 @@ def index():
 @app.route('/home')
 def home():
     if session.get('user_logged_in'):
+        if session.get('user_username') == "deleted_user":
+            flash("You should not be logged in as a deleted user", "danger")
+            return redirect(url_for('user_logout'))
         s = db_session()
         user = s.query(User).filter_by(username=session.get('user_username')).first()
         if not user:
-            return redirect(url_for('user_logout'));
-    return render_template('home.html');
+            return redirect(url_for('user_logout'))
+    return render_template('home.html')
 
 @app.route('/user/delete', methods=['GET', 'POST'])
 def user_delete():
@@ -294,6 +331,38 @@ def user_delete():
 
     return render_template('delete_user.html')
     
+@app.route('/suggestion/delete/', methods=['POST', 'DELETE'])
+def delete_suggestion():
+    if request.form.get('_method') != "DELETE":
+        flash("Bad Method")
+        return redirect(url_for('account'))
+    s = db_session()
+    user = s.query(User).filter_by(username=session.get('user_username')).first()
+    if not user:
+        flash("An error occurred. Account not found.", "danger")
+        return redirect(url_for('home'))
+
+    suggestion_id = request.form.get('id', type=int)
+    if suggestion_id:
+        suggestion = s.query(Suggestion).get(suggestion_id)
+        if suggestion and suggestion.user_id == user.id:
+            s.delete(suggestion); s.commit()
+            flash("Suggestion deleted", "success")
+        else:
+            flash("Suggestion not found", "danger")
+    else:
+        flash("An error occurred.", "danger")
+
+    s.close()
+    # TODO: add this into the actuall template args
+    nxt = request.args.get('next') or url_for('home')
+    return redirect(nxt)
+
+@app.route('/admin/poll', methods=['GET', 'POST', 'DELETE'])
+def admin_poll():
+    # TODO
+    flash("NOT IMPLEMENTED", "danger")
+    return redirect(url_for('home'))
 
 @app.route('/get/configopts', methods=['GET'])
 def get_config_opts():
@@ -321,73 +390,88 @@ def session_config(location, difficulty, show_all_photos):
         return redirect(url_for('home'))
 
     # on first login neither are set so always true
-    if session.get('location') != location or session.get('difficulty') != difficulty:
+    if session.get('location') != location or session.get('difficulty') != difficulty or \
+            session.get('current_photo_index') >= len(session.get('photo_list')):
         session['current_score'] = 0
         session['current_streak'] = 0
-        session['photo_list'] = None
         session['current_photo_index'] = 0
+        session.pop('photo_list', None)
     session['location'] = location
     session['difficulty'] = difficulty
     session['show_all_photos'] = show_all_photos
     for loc in Location:
         if loc == location: 
             session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
-            break;
+            break
 
+    return redirect(url_for('play'))
+
+@app.route('/play/next')
+def inc_photo_index(): # prevent user refresh from updating photo index
+    session['current_photo_index'] = session.get('current_photo_index') + 1
     return redirect(url_for('play'))
 
 @app.route('/play')
 def play():
+    if not session.get('difficulty') and session.get('location'):
+        return redirect(url_for('home'))
     # Randomize selection server-side: pick one random photo
     s = db_session()
     if not session.get('photo_list'):
+        # TODO: use a random id starting point with overflow modulo instead of func.random() - Performance
         if session.get('show_all_photos'):
-            session['photo_list'] = [x[0] for x in s.query(Photo.id).filter_by(location=session.get('location')).order_by(func.random()).all()]
+            session['photo_list'] = [x[0] for x in\
+                    s.query(Photo.id)
+                        .filter_by(location=session.get('location'))
+                        .order_by(func.random())
+                        .limit(MAX_PHOTOS)
+                        .all()]
         else: 
-            session['photo_list'] = [x[0] for x in s.query(Photo.id).filter_by(location=session.get('location'), difficulty=session.get('difficulty')).order_by(func.random()).all()]
+            session['photo_list'] = [x[0] for x in\
+                    s.query(Photo.id)
+                        .filter_by(location=session.get('location'), difficulty=session.get('difficulty'))
+                        .order_by(func.random())
+                        .limit(MAX_PHOTOS)
+                        .all()]
 
         session['current_photo_index'] = 0
 
-    if session.get('current_photo_index') >= len(session.get('photo_list')):
+    if len(session.get('photo_list')) == 0:
         s.close()
+        return redirect(url_for('no_photos'))
 
-        if len(session.get('photo_list')) == 0: # if they haven't seen any photos then there prolly none there ay
-            return render_template('no_photos.html')
-
-        return redirect(url_for('seen_all_photos'))
+    if session.get('current_photo_index') >= MAX_PHOTOS or session.get('current_photo_index') >= len(session.get('photo_list')):
+        s.close()
+        return redirect(url_for('end_of_session'))
 
     photo = s.query(Photo).filter_by(id=session.get('photo_list')[session.get('current_photo_index')]).first()    
 
     if not photo:
-        flash("An error has occurred, please try again later", "danger");
+        flash("An error has occurred, please try again later", "danger")
         s.close()
         return redirect(url_for('home'))
 
     for diff in Difficulty:
         if diff == photo.difficulty:
-            difficulty = diff.name;
+            difficulty = diff.name
 
     s.close()
-
-    session['current_photo_index'] = session.get('current_photo_index') + 1;
 
     return render_template('play.html', photo=photo, difficulty=difficulty)
 
 @app.route('/user', methods=['GET'])
 @user_login_required
 def account():
-    s = db_session();
+    s = db_session()
     user = s.query(User).filter_by(username=session.get('user_username')).first()
     if not user:
         s.close()
         flash("User not found.", "danger")
         return redirect(url_for('user_login'))
 
-    suggestions = [(x.content, x.votes) for x in \
-                        s.query(Suggestion).filter_by(user_id=user.id).all()]
+    suggestions = [(x.content, x.votes, x.id) for x in user.suggestions]
 
-    highscores = [(x.highscore, x.perfect_streak, x.difficulty_name) for x in \
-                        s.query(Highscore).filter_by(user_id=user.id).all()]
+    highscores = [(x.highscore, x.perfect_streak, x.difficulty_name) for x in user.highscores]
 
     s.close()
     return render_template('user_account.html', user=user, suggestions=suggestions, highscores=highscores)
@@ -399,52 +483,60 @@ def suggestion():
         flash("You're a cheeky one, I'll grant you. But you need to piss off now.", "danger")
         return redirect(url_for('user_login'))
 
-    if request.method == 'POST':
-        s = db_session()
-        user_id = s.query(User.id).filter_by(username=session.get('user_username')).scalar()
-        s.close()
-        if not user_id:
-            flash("Okay... how in God's name did you get this far?????", "Warning");
-            return redirect(url_for('user_login'))
+    s = db_session()
+    can_submit = False 
 
+    user_id = s.query(User.id).filter_by(username=session.get('user_username')).scalar()
+    if not user_id:
+        s.close()
+        flash("Okay... how in God's name did you get this far?????", "success")
+        return redirect(url_for('user_login'))
+
+    if s.query(Suggestion).filter_by(user_id=user_id).count() < MAX_SUGGESTIONS:
+        can_submit = True 
+
+    s.close()
+
+    if request.method == 'POST':
+        if not can_submit:
+            flash("You've exceeded the maximum number of suggestions", "danger")
+            return redirect(url_for('account'))
         content = request.form.get('suggestion-content', '').strip()
+
         try:
             add_suggestion(user_id, content)
             flash('Your suggestion has been added!', 'success')
         except ValueError as e:
-            flash("Failed to add your suggestion. No idea why...", "danger")
+            flash("An error occurred, please try again later... but like... much later, cos something is broken broken", "danger")
             print(e)
-    return render_template('suggestion.html')
+
+    return render_template('suggestion.html', can_submit=can_submit)
 
 @app.route('/nomorephotos', methods=['GET'])
-def seen_all_photos():
-    return render_template('seen_all_photos.html')
+def end_of_session():
+    return render_template('end_of_session.html')
 
-@app.route('/admin/suggestions', methods=['GET', 'POST'])
+@app.route('/admin/suggestions', methods=['GET'])
 @login_required
 def admin_suggestions():
-    if request.method == "POST":
-        if not request.id:
-            flash("I need an id dog...", "danger")
-            return redirect(url_for('admin_suggestions'))
-        s = db_session()
-        suggestion = s.query(Suggestion).filter_by(id=request.id).first()
-        s.delete(suggestion); s.commit(); s.close();
-        flash("Deleted suggestion", "success")
-        return redirect(url_for('admin_suggestions'))
-
     s = db_session()
-    suggestions = [[x] for x in s.execute(select(Suggestion)).scalars().all()]
-    for suggestion in suggestions:
-        suggestion.append(s.query(User.username).filter_by(id=suggestion[0].user_id).first()[0])
+    suggestions = [[x, x.user.username, x.id] for x in s.execute(select(Suggestion).options(selectinload(Suggestion.user))).scalars().all()]
     s.close()
     return render_template('admin_suggestions.html', suggestions=suggestions)
 
 @app.route('/guess', methods=['POST'])
+@csrf.exempt # manually for json
 def guess():
     data = request.json
     if not data:
         return jsonify({"error":"No JSON payload"}), 400
+
+    csrf_token = data.get('csrf_token')
+    try:
+        validate_csrf(csrf_token)
+    except CSRFError:
+        return jsonify({"error": "Invalid CSRF Token"}), 400
+
     photo_id = data.get('photo_id')
     guess_lat = data.get('guess_lat')
     guess_lng = data.get('guess_lng')
@@ -474,8 +566,8 @@ def guess():
     elif session.get('difficulty') == Difficulty.IMPOSSIBLE:
         WIN_DIST = 0.1
     else:
-        flash("Please select a difficulty to play", "Danger")
-        return redirect(url_for('home'))
+        flash("Please select a difficulty to play", "danger")
+        return jsonify({"error": "No difficulty selected"}), 400
 
     if dist_m < WIN_DIST:
         points = MAX_POINTS
@@ -496,6 +588,12 @@ def guess():
 
     # ================================================
 
+    if points >= MAX_POINTS:
+        points = MAX_POINTS
+        session['current_streak'] = session.get('current_streak') + 1
+    else:
+        session['current_streak'] = 0
+
     session['current_score'] = session.get('current_score') + int(points)
     if session.get('user_logged_in'):
         update_highscore()
@@ -505,7 +603,8 @@ def guess():
         "points": math.floor(points),
         "true_lat": true_lat,
         "true_lng": true_lng,
-        "current_score": session.get('current_score')
+        "current_score": session.get('current_score'),
+        "current_streak": session.get('current_streak')
     })
 
 @app.route('/user/logout')
@@ -524,14 +623,17 @@ def user_login():
 
         s = db_session()
         user = s.query(User).filter_by(username=username).first()
+        s.close()
+
         if user and check_password_hash(user.password_hash, password):
             session['user_logged_in'] = True
             session['user_username'] = username
             update_highscore()
+
             flash('Logged in successfully', 'success')
             nxt = request.args.get('next') or url_for('home')
             return redirect(nxt)
-        s.close()
+
         flash('Dodgy Credentials.', 'danger')
     return render_template('login.html')
 
@@ -541,10 +643,10 @@ def user_create():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         try:
-            user = create_user(username, password);
+            create_user(username, password)
             flash('Account Created', 'success')
             session['user_logged_in'] = True
-            session['user_username'] = user.username
+            session['user_username'] = username
             update_highscore()            
             return redirect(url_for('home'))
         except ValueError as e:
@@ -565,14 +667,6 @@ def get_username(username):
             'isUser': False
         }), 200
 
-@app.route('/reset')
-def reset_photos():
-    session['photo_list'] = None
-    session['current_photo_index'] = 0
-    session['current_score'] = 0
-    return redirect(url_for('home'))
-
-# --- Admin routes ---
 @app.route('/admin/login', methods=['GET','POST'])
 def admin_login():
     if request.method == 'POST':
@@ -605,17 +699,15 @@ def admin():
             flash('No file part', 'danger')
             return redirect(request.url)
 
-        lat = request.form.get('lat')
-        lng = request.form.get('lng')
-        loc = request.form.get('location')
-        diff = request.form.get('difficulty')
-
-        print(lat, lng, loc, diff)
+        lat = request.form.get('lat', type=float)
+        lng = request.form.get('lng', type=float)
+        loc = request.form.get('location', type=int)
+        diff = request.form.get('difficulty', type=int)
 
         if (not loc) and (not diff):
-            flash("Using location and difficulty defaults", "info");
-            loc = DEFAULT_LOCATION;
-            diff = DEFAULT_DIFFICULTY;
+            flash("Using location and difficulty defaults", "info")
+            loc = DEFAULT_LOCATION
+            diff = DEFAULT_DIFFICULTY
         elif not loc:
             flash("Using default location: " + DEFAULT_LOCATION.name[0] + DEFAULT_LOCATION.name[1:].lower(), "info")
             loc = DEFAULT_LOCATION
@@ -650,7 +742,7 @@ def admin():
                     os.remove(tmp_file)
 
             s = db_session()
-            p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=loc, difficulty=diff)
+            p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=int(loc), difficulty=int(diff))
             s.add(p); s.commit(); s.close()
             flash('Photo uploaded and saved.', 'success')
             return redirect(url_for('admin'))
@@ -690,9 +782,23 @@ def uploaded_file(filename):
 # --- Error handlers, small helpers ---
 @app.errorhandler(404)
 def not_found(e):
+    search_help = None
+    if "login" in request.path:
+        search_help = "/user/login"
+    if "user" in request.path:
+        search_help = "/account"
+
+    if search_help:
+        flash("Maybe you meant: " + search_help, "warning")
+
     return render_template('404.html'), 404
+
+@app.route("/favicon.ico")
+def serve_favicon():
+    return send_from_directory(app.static_folder, 'favicon.ico')
 
 # --- Run (if executed directly) ---
 if __name__ == '__main__':
     app.run(debug=True)
+
 

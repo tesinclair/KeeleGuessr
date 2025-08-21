@@ -4,6 +4,7 @@
   
   <div>
       <form class="upload-form" method="post" action="{{url_for('admin')}}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
       <div class="uf-image-map">
         <input id="photo" type="file" name="photo" accept="image/*" required>
         <div class="hidden photo-card" id="photo-card">

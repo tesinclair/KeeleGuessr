@@ -5,6 +5,7 @@
     <p>Confirm your username to leave forever</p>
     <form autocomplete="off" method="post">
         <input type="hidden" autocomplete="false" style="display:none;">
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
       <div class="uname" id="uname-div">
         <input class="login-input" id="uname-input" name="username" required>
       </div>

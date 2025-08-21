@@ -22,6 +22,9 @@
     --btn-color-user: rgb(0, 0, 120);
     --btn-color-admin-hover: rgb(0, 80, 0);
     --btn-color-user-hover: rgb(0, 0, 80);
+
+    --card-bg-color: rgba(30, 30, 30, .7);
+    --card-hover-shadow: rgb(20, 20, 20);
 }
 
 body{
@@ -30,9 +33,9 @@ body{
     border: 0;
     padding: 0;
     max-width: 100svw;
-    overflow: hidden;
     background-color: var(--bg-color-normal);
     color: var(--font-color-normal);
+    overflow-x: hidden;
 }
 
 .hidden{
@@ -83,7 +86,7 @@ body{
     background-color: var(--btn-color-user-hover);
 }
 
-a:is(.btn){
+a:is(.btn), a:is(.delete-btn){
     text-decoration: none;
     display: flex;
     justify-content: center;
@@ -108,5 +111,42 @@ a:is(.btn){
 .delete-btn:focus{
     background-color: rgb(60, 0, 0);
     color: var(--font-color-hover);
+}
+.delete-btn:not(:is(.no-grow)):hover,
+.delete-btn:not(:is(.no-grow)):focus{
     scale: 0.9;
+}
+
+.card{
+    position: relative;
+    background-color: var(--card-bg-color);
+    border-radius: 2em;
+    padding: 1em;
+    overflow: hidden;
+    overflow-wrap: break-word;
+
+    transition: all .3s ease;
+}
+.card div{
+    max-height: 70%;
+    overflow-y: scroll;
+}
+
+.card:hover{
+    scale: 1.05;
+    box-shadow: 0em .25em .5em var(--card-hover-shadow);
+}
+
+.card-delete-btn{
+    position: absolute;
+    bottom: 1em;
+    width: 80%;
+    left: calc(-100%);
+    display: none;
+}
+
+.card:hover .card-delete-btn{
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: block;
 }
