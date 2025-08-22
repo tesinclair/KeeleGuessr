@@ -4,13 +4,17 @@
     justify-content: space-between;
     margin-inline: 3em;
     margin-block: 1em;
+    position: sticky;
+    top: .5em;
+    z-index: 99;
 }
-.nav a{
+.nav a:not(:has(svg)){
     text-decoration: none;
     color: var(--font-color-normal);
     transition: all 0.3s ease;
+    mix-blend-mode: difference;
 }
-.nav a:hover{
+.nav a:not(:has(svg)):hover{
     color: var(--font-color-hover);
     scale: 1.01; 
 }
@@ -21,8 +25,8 @@
 .nav-list{
     display: flex;
     flex-direction: row;
+    align-items: center;
+    justify-content: center;
     gap: 2em;
     color: var(--font-color-normal);
 }
-
-

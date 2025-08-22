@@ -1,3 +1,8 @@
+.game{
+    --streak-color: #f8fafc;
+    overflow: hidden;
+}
+
 @media only screen and (min-width: 768px){
 
     #map { 
@@ -50,10 +55,10 @@
         z-index: 1;
     }
     .current-score{
-        font-size: 8ch;
+        font-size: 5ch;
     }
     .highscore{
-        font-size: 3ch;
+        font-size: 2ch;
     }
 
     .photo{
@@ -61,6 +66,7 @@
         width: 100svw;
         text-align: center;
         flex: 9;
+        position: relative;
     }
 
     .game{
@@ -94,7 +100,6 @@
     border-radius: 5px;
     cursor: pointer;
 }
-
 .guess-zone.has-guess #submitGuess:hover{
     background: #005a87;
 }
@@ -108,6 +113,14 @@
     color: var(--font-color-normal);
 }
 
+.fullscreen-picture{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100svw !important;
+    height: 100svh !important;
+}
+
 .result-cont{
     display: flex;
     flex-direction: row;
@@ -116,6 +129,22 @@
     justify-content: center;
 }
 
+.difficulty-text-play{
+    position: absolute;
+    top: -2em;
+    left: 50%;
+    transform: translate(-50%, 0);
+}
+
+@media only screen and (max-width: 768px){
+    .difficulty-text-play{
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        position: absolute;
+        top: 50%; 
+        left: -2em;
+    }
+}
 
 @media only screen and (max-width: 768px){
 
@@ -124,6 +153,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        position: relative;
     }
     .photo{
         height: 40svh;
@@ -151,4 +181,18 @@
     } 
 }
 
+.current-streak{
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5ch;
+    color: var(--streak-color);
+
+    transition: rotate .1s ease;
+}
+
+.streak-lost{
+    transform: rotate(0, 45deg, 0);
+}
 

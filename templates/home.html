@@ -1,25 +1,124 @@
 {% extends "layout.html" %}
 {% block content %}
     <div class="home-page">
-        <h2>Keele Guessr!</h2>
+        <div class="hp-menu">
+        <h2>KeeleGuesser!</h2>
         <p>Choose your location and difficulty and start guessing!</p>
         <div class="hp-config">
-            <div class="hp-toggle NORMAL" id="hp-difficulty-toggle">
-                <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
-                <input type="hidden" name="difficulty" id="difficulty" value="2">
+            <div class="hp-toggle-cont">
+                <div class="hp-toggle DEFAULT" id="hp-difficulty-toggle">
+                    <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
+                    <input type="hidden" name="difficulty" id="difficulty" value="2">
+                </div>
             </div>
-            <div class="hp-toggle" id="hp-location-toggle">
-                <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
-                <input type="hidden" name="location" id="location" value="1">
+            <div class="hp-toggle-cont">
+                <div class="hp-toggle" id="hp-location-toggle">
+                    <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
+                    <input type="hidden" name="location" id="location" value="1">
+                </div>
             </div>
         </div>
+            <div class="hp-checkbox">
+                <span class="hp-checkbox-text">Show all photos</span>
+                <input type="checkbox" id="hp-checkbox">
+            </div>
         <button onclick="configureSession()" class="btn user" id="hp-btn">PLAY</button>
+        <span class="info-text hp-scroll-down"> 
+            Scroll down 
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 120 60">
+              <line x1="10" y1="30" x2="90" y2="30" stroke="black" stroke-width="4" stroke-linecap="round" />
+              <polygon points="90,20 110,30 90,40" fill="black" stroke="black" stroke-linejoin="round" />
+            </svg>
+        </span>
+        </div>
+        <section class="leaderboard" id="leaderboard">
+            <h2>Leaderboard</h2>
+            <div class="lb-scoreboard-cont">
+                <table class="lb-board-highscore" id="lb-highscore-table">
+                    <tr>
+                        <th>Username</th>
+                        <th>Highscore</th>
+                    </tr>
+                    {% for i in range(5) %}
+                    <tr class="lb-table-data" id="lb-highscore-data-{{i}}">
+                        <td class="lb-username">---</td>
+                        <td class="lb-score">0</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <table class="lb-board-perfect-streak" id="lb-streak-table">
+                    <tr class="lb-board-streak">
+                        <th>Username</th>
+                        <th>Perfect Streak</th>
+                    </tr>
+                    {% for i in range(5) %}
+                    <tr class="lb-table-data" id="lb-streak-data-{{i}}">
+                        <td class="lb-username">---</td>
+                        <td class="lb-score">0</td>
+                    </tr>
+                    {% endfor %}
+                </table>            
+            </div>
+        </section>
     </div>
     <script>
+        let difficultyChoice = null;
+        let locationChoice = null;
+
         const difficultyToggle = document.getElementById('hp-difficulty-toggle');
         const locationToggle = document.getElementById('hp-location-toggle');
         const difficultyInput = document.getElementById('difficulty');
         const locationInput = document.getElementById('location');
+        let showAllPhotos = (document.getElementById('hp-checkbox').checked ? 1 : 0);
+
+        document.getElementById('hp-checkbox').addEventListener('change', (e) => {
+            showAllPhotos = (e.target.checked ? 1 : 0);
+
+            updateLBTable();
+        });
+
+
+
+        async function updateLBTable(){
+            const url = "{{ url_for('get_leaderboard', difficulty=0, location=0, show_all_photos=0) }}"
+            tableInfo = await getInfo(url
+                .replace('/0/0/0', `/${difficultyInput.value}/${locationInput.value}/${showAllPhotos}`)); 
+
+            for (let i = 0; i < 5; i++){
+                const streakTable = document.getElementById(`lb-streak-data-${i}`);
+                const streakUname = streakTable.querySelector('.lb-username');
+                const streakScore = streakTable.querySelector('.lb-score');
+
+                for (const el of tableInfo.streak){
+                    if (el.order == (i + 1)){
+                        streakUname.innerhtml = el.username;
+                        streakScore.innerhtml = el.score;
+                        break;
+                    }
+                }
+                
+                const highscoreTable = document.getElementById(`lb-highscore-data-${i}`);
+                const highscoreUname = highscoreTable.querySelector('.lb-username');
+                const highscoreScore = highscoreTable.querySelector('.lb-score');
+
+                for (const el of tableInfo.highscore){
+                    if (el.order == (i + 1)){
+                        highscoreUname.innerHTML = el.username;
+                        highscoreScore.innerHTML = el.score;
+                        break;
+                    }
+                }
+
+            }
+        }
+
+        document.getElementById('hp-checkbox').addEventListener('change', (e)=>{
+            if (e.target.value){
+                showAllPhotos = 1;
+            }else{
+                showAllPhotos = 0;
+            }
+        });
 
         const UP = 1;
         const DOWN = -1;
@@ -32,13 +131,13 @@
             },
             difficulty: {
                 EASY: 1,
-                NORMAL: 2,
+                MEDIUM: 2,
                 HARD: 3
             }
         };
 
         document.addEventListener("DOMContentLoaded", async () => {
-            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+            const opts = await getInfo("{{url_for('get_config_opts')}}")
 
             if (!opts){
                 clientFlash("Network issue. Using Default Options", "warning");
@@ -50,29 +149,40 @@
                 Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
                 );
 
+            updateLBTable();
+
         });
 
         function configureSession(){
-            const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1)}}";
-            window.location.href = sessioncfgUrl.replace("/0/1", `/${locationInput.value}/${difficultyInput.value}`);
+            const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1, show_all_photos=0)}}";
+            window.location.href = sessioncfgUrl.replace("/0/1/0", `/${locationInput.value}/${difficultyInput.value}/${showAllPhotos}`);
         }
+        // TODO: add same effect for phone users
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            let direction = getDirection(e.wheelDelta);
+
+            if (direction == UP){
+                document.body.scrollIntoView({ behaviour: 'smooth' });
+                document.querySelector('.hp-scroll-down').classList.remove('hidden');
+            }else{
+                document.querySelector('.leaderboard')?.scrollIntoView({ behaviour: 'smooth' });
+                document.querySelector('.hp-scroll-down').classList.add('hidden');
+            }
+
+        }, {passive: false});
 
         let locationScrollPos = -1;
         let difficultyScrollPos = -1;
 
-        let numScrolls = 0;
         locationToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 3 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
 
             locations = Object.keys(configOpts.location);
 
-            let locationChoice;
             [locationScrollPos, locationChoice] = scrollObject(
                 document.getElementById('hp-location-toggle-text'),
                 direction,
@@ -80,16 +190,17 @@
                 locations,
                 locations.length
             );
-            numScrolls = ++numScrolls % 3;
 
             locationInput.value = configOpts.location[locationChoice];
-        });
+            updateLBTable();
+
+            e.preventDefault();
+        }, {passive: false});
 
         locationToggle.addEventListener('touchstart', () => {
 
             locations = Object.keys(configOpts.location);
 
-            let locationChoice;
             [locationScrollPos, locationChoice] = scrollObject(
                 document.getElementById('hp-location-toggle-text'),
                 DOWN,
@@ -99,21 +210,17 @@
             );
 
             locationInput.value = configOpts.location[locationChoice];
+            updateLBTable();
         });
 
 
         difficultyToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 3 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
 
             difficulties = Object.keys(configOpts.difficulty);
 
-            let difficultyChoice;
             [difficultyScrollPos, difficultyChoice] = scrollObject(
                 document.getElementById('hp-difficulty-toggle-text'),
                 direction,
@@ -125,15 +232,15 @@
             difficultyToggle.className = "hp-toggle";
             difficultyToggle.classList.add(difficultyChoice);
 
-            numScrolls = ++numScrolls % 3;
-
             difficultyInput.value = configOpts.difficulty[difficultyChoice];
-        });
+            updateLBTable();
+
+            e.preventDefault();
+        }, {passive: false});
 
         difficultyToggle.addEventListener('touchstart', () => {
             difficulties = Object.keys(configOpts.difficulty);
 
-            let difficultyChoice;
             [difficultyScrollPos, difficultyChoice] = scrollObject(
                 document.getElementById('hp-difficulty-toggle-text'),
                 DOWN,
@@ -146,6 +253,7 @@
             difficultyToggle.classList.add(difficultyChoice);
 
             difficultyInput.value = configOpts.difficulty[difficultyChoice];
+            updateLBTable();
         });
 
     </script>

@@ -1,0 +1,79 @@
+.user-account-page{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    height: 80svh;
+}
+
+.uap-flex-sections{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+    gap: 5em;
+}
+
+.uap-flex-sections section{
+    max-width: 50%;
+}
+
+.uap-suggestion-sec{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.suggestions{
+    display: flex;
+    flex-direction: row;
+    gap: 2em;
+    align-items: center;
+    list-style-type: none;
+    max-width: 100%;
+    whites-space: nowrap;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+.suggestion{
+    flex: 0 0 auto;
+    height: 20svh;
+    width: 10svw;
+    float: none;
+    display: inline-block;
+}
+
+.uap-btn-cont{
+    position: absolute;
+    bottom: 1em;
+    right: 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+}
+
+.uap-mobile-sec{
+    height: 90svh;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding-top: 5em;
+}
+
+.uap-btn-mobile-cont{
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 0;
+    height: fit-content;
+}
+

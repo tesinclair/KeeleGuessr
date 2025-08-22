@@ -9,6 +9,8 @@
 @import "home.css";
 @import "play.css";
 @import "user_suggestions.css";
+@import "user_account.css";
+@import "delete_user.css";
 
 :root{
     --font-color-normal: rgb(220, 220, 220);
@@ -20,6 +22,13 @@
     --btn-color-user: rgb(0, 0, 120);
     --btn-color-admin-hover: rgb(0, 80, 0);
     --btn-color-user-hover: rgb(0, 0, 80);
+
+    --card-bg-color: rgba(30, 30, 30, .7);
+    --card-hover-shadow: rgb(20, 20, 20);
+}
+
+html{
+    height: 100%;
 }
 
 body{
@@ -28,9 +37,10 @@ body{
     border: 0;
     padding: 0;
     max-width: 100svw;
-    overflow: hidden;
+    height: 100%;
     background-color: var(--bg-color-normal);
     color: var(--font-color-normal);
+    overflow-x: hidden;
 }
 
 .hidden{
@@ -81,11 +91,148 @@ body{
     background-color: var(--btn-color-user-hover);
 }
 
-a:is(.btn){
+a:is(.btn), a:is(.delete-btn){
     text-decoration: none;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 1ch;
     text-align: center;
+}
+
+.delete-btn{
+    /* default width, height and fontsize */
+    font-size: 1.5ch;
+    padding: 1em;
+    /* -------------------- */
+    border-radius: 1.5em;
+    color: var(--font-color-normal);
+    font-weight: bold;
+    transition: all .3s ease;
+    background-color: rgb(100, 0, 0);
+    border: 2px solid rgb(100, 0, 0);
+}
+.delete-btn:hover,
+.delete-btn:focus{
+    background-color: rgb(60, 0, 0);
+    color: var(--font-color-hover);
+}
+.delete-btn:not(:is(.no-grow)):hover,
+.delete-btn:not(:is(.no-grow)):focus{
+    scale: 0.9;
+}
+
+.card{
+    position: relative;
+    background-color: var(--card-bg-color);
+    border-radius: 2em;
+    padding: 1em;
+    overflow: hidden;
+    overflow-wrap: break-word;
+
+    transition: all .3s ease;
+}
+.card div{
+    max-height: 70%;
+    overflow-y: scroll;
+}
+
+.card:hover{
+    scale: 1.05;
+    box-shadow: 0em .25em .5em var(--card-hover-shadow);
+}
+
+.card-delete-btn{
+    position: absolute;
+    bottom: 1em;
+    width: 80%;
+    left: calc(-100%);
+    display: none;
+}
+
+.card:hover .card-delete-btn{
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: block;
+}
+
+table{
+    border-collapse: separate;
+    border-spacing: .1em;
+    padding: 2em;
+    position: relative;
+}
+
+table th,
+table td{
+    padding: 2em 2.5em;
+    text-align: center;
+    border-radius: .5em;
+    position: relative;
+    backdrop-filter: blur(1em);
+    border: 2px solid rgba(255, 255, 255, .1);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-size: 1.2ch;
+    min-width: 10em;
+}
+
+table th {
+    background: linear-gradient(135deg,rgba(2, 0, 36, .5), rgba(0, 212, 255, .5));
+    color: #fff;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.5);
+    box-shadow: 0 8px 32px rgba(128,0,255,0.3);
+}
+
+table td {
+    background: rgba(0,0,50,0.6);
+    color: #e0e0ff;
+    font-weight: 500;
+}
+
+table tr:hover td {
+    background: linear-gradient(45deg, rgba(255,0,128,0.3), rgba(0,255,255,0.3));
+    color: #fff;
+    transform: translateY(-8px) rotateX(5deg);
+    box-shadow: 0 20px 40px rgba(255,0,128,0.4);
+    border-color: rgba(255,255,255,0.5);
+    text-shadow: 0 0 15px #fff;
+}
+
+.info-text{
+    position: fixed;
+    right: 1em;
+}
+
+.icon{
+    -webkit-filter: invert(95%);
+    filter: invert(95%);
+    height: 2rem;
+    width: 2rem;
+    transition: all .3s ease;
+}
+.icon:hover,
+.icon:focus{
+    scale: 1.1; 
+    -webkit-filter: invert(90%);
+    filter: invert(90%);
+}
+
+@keyframes stretch-vert{
+    0%, 100%{
+        transform: scaleY(1) rotate(90deg) translate(0, 0px);
+    }
+    50%{
+        transform: scaleY(1.5) rotate(90deg) translate(15%, 0);
+    }
+}
+
+@keyframes wobble{
+    0% {rotate: 0;}
+    12% {rotate: 5deg;}
+    25% {rotate: 0deg;}
+    37% {rotate: -5deg;}
+    50% {rotate: 0deg;}
 }

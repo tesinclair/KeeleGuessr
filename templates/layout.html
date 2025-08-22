@@ -4,33 +4,71 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>KeeleGuessr</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.min.js"></script>
     <script src="{{url_for('static', filename='js/clientFlash.js')}}"></script>
-    <script src="{{url_for('static', filename='js/getConfigOpts.js')}}"></script>
+    <script src="{{url_for('static', filename='js/get.js')}}"></script>
     <script src="{{url_for('static', filename='js/getDirection.js')}}"></script>
     <script src="{{url_for('static', filename='js/scrollObject.js')}}"></script>
   </head>
   <body>
     <nav class="nav">
-        {% if session.get('location') %}
+        {% if session.get('location') and request.path != url_for('play') %}
         <a class="nav-header" href="{{ url_for('play') }}">Keele Guesser</a>
         {% else %}
         <a class="nav-header" href="{{ url_for('home') }}">Keele Guesser</a>
         {% endif %}
         <div class="nav-list">
-            {% if session.get('location') %}
-            <a href="{{ url_for('home') }}">Settings</a>
+            {% if session.get('location') and request.path != url_for('home') %}
+            <a href="{{ url_for('home') }}">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="black"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     role="img"
+                     aria-labelledby="title desc"
+                     class="icon">
+                  <path d="M3 11l9-8 9 8"/>
+                  <path d="M5 11v10h14V11"/>
+                  <path d="M10 21v-6h4v6"/>
+                </svg>
+
+            </a>
             {% endif %}
             {% if session.admin_logged_in %}
+                {% if request.path == url_for('admin') %}
+                <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
+                <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% elif request.path == url_for('admin_suggestions') %}
+                <a href="{{ url_for('admin') }}">Admin</a>
+                <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% else %}
                 <a href="{{ url_for('admin') }}">Admin</a>
                 <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
+                {% endif %}
             {% elif session.user_logged_in %}
-                <a href="{{ url_for('suggestion') }}">Add Suggestion</a>
-                <a href="{{ url_for('user_logout') }}">Logout</a>
+                <a href="{{ url_for('account') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         viewBox="0 0 24 24"
+                         fill="none"
+                         stroke="black"
+                         stroke-width="2"
+                         stroke-linecap="round"
+                         stroke-linejoin="round"
+                         role="img"
+                         aria-labelledby="title desc"
+                         class="icon">
+                      <circle cx="12" cy="7" r="4"/>
+                      <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+                    </svg>
+                </a>
             {% else %}
                 {% if request.path != url_for('user_login') %}
                 <a href="{{ url_for('user_login') }}">Login</a> 
@@ -60,6 +98,21 @@
     {% block scripts %}{% endblock %}
   </body>
 <script>
+
+    let isPhone = (window.innerWidth < 768);
+
+    function testMobileWidth(){
+        if (window.innerWidth < 500){ // not the same as isPhone
+            document.querySelector('.nav-header').innerHTML = "K.G.";
+        }else{
+            document.querySelector('.nav-header').innerHTML = "Keele Guesser";
+        }
+        isPhone = (window.innerWidth < 768);
+    }
+    testMobileWidth();
+
+    window.addEventListener("resize", testMobileWidth);
+
     flash = document.getElementById('flash-div');
 
     requestAnimationFrame(()=>{
@@ -81,6 +134,29 @@
             flashEl.classList.add('hidden');
         }, 300);
     }
+
+    window.addEventListener("load", () => {
+        if (isPhone){
+            document.querySelectorAll('.pc-only')
+                .forEach((el) => {
+                    el.classList.add('hidden');      
+                });
+            document.querySelectorAll('.mobile-only')
+                .forEach((el) => {
+                    el.classList.remove('hidden');
+                });
+        }else{
+            document.querySelectorAll('.pc-only')
+            .forEach((el) => {
+                el.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.mobile-only')
+                .forEach((el) => {
+                    el.classList.add('hidden');
+                });
+        }
+    });
 </script>
 </html>
 

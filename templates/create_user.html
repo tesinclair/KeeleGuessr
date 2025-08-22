@@ -4,6 +4,7 @@
     <h4>Create Account</h4>
     <form method="post" autocomplete="off">
       <input autocomplete="false" name="hidden" type="text" style="display:none;">
+      <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
       <div class="uname" id="uname-div">
         <input id="uname" class="create-input" name="username" required>
       </div>
@@ -106,7 +107,8 @@
             uname.classList.remove('good-username');
             return;
         }
-        const unameExists = await getUserExists(uname.value);
+        const url = "{{ url_for('get_username', username='TEMP') }}";
+        const unameExists = await getInfo(url.replace('TEMP', '{{session.user_username}}'));
         if (!unameExists){
             uname.classList.remove('bad-username');
             uname.classList.add('good-username');
@@ -115,24 +117,6 @@
             uname.classList.add('bad-username');
         }
     });
-
-    async function getUserExists(username){
-        try{
-            const url = "{{ url_for('get_username', username='TEMP') }}";
-            const response = await fetch(url.replace('TEMP', username));
-            const data = await response.json();
-            
-            if (response.ok){
-                return data.isUser;
-            } else{
-                console.error("Error: Failed to get user data");
-                return false;
-            }
-        } catch (error){
-            console.error("Network Error: ", error);
-            return false
-        }
-    }
 
 </script>
 {% endblock %}

@@ -1,4 +1,4 @@
-async function getConfigOpts(url){
+async function getInfo(url){
     try {
         const res = await fetch(url);
         const data = await res.json();

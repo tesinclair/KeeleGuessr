@@ -4,6 +4,7 @@
   
   <div>
       <form class="upload-form" method="post" action="{{url_for('admin')}}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
       <div class="uf-image-map">
         <input id="photo" type="file" name="photo" accept="image/*" required>
         <div class="hidden photo-card" id="photo-card">
@@ -91,7 +92,7 @@
         photoCard.classList.remove('hidden');
     }
 
-    document.getElementById('btn-swap-photo').addEventListener('onclick', () => {
+    document.getElementById('btn-swap-photo').addEventListener('click', () => {
         photoCard.classList.add('hidden');
         photoUpload.classList.remove('hidden');
     });
@@ -143,13 +144,13 @@
             },
             difficulty: {
                 EASY: 1,
-                NORMAL: 2,
+                MEDIUM: 2,
                 HARD: 3
             }
         };
 
         document.addEventListener("DOMContentLoaded", async () => {
-            const opts = await getConfigOpts("{{url_for('get_config_opts')}}")
+            const opts = await getInfo("{{url_for('get_config_opts')}}")
 
             if (!opts){
                 clientFlash("Network issue. Using Default Options", "warning");
@@ -165,12 +166,7 @@
         let locationScrollPos = -1;
         let difficultyScrollPos = -1;
 
-        let numScrolls = 0;
         locationToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 2 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
@@ -185,16 +181,10 @@
                 locations,
                 locations.length
             );
-            numScrolls = ++numScrolls % 2;
-
             locationInput.value = configOpts.location[locationChoice];
         });
 
         difficultyToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 2 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
@@ -212,8 +202,6 @@
             
             difficultyToggle.className = "hp-toggle";
             difficultyToggle.classList.add(difficultyChoice);
-
-            numScrolls = ++numScrolls % 2;
 
             difficultyInput.value = configOpts.difficulty[difficultyChoice];
         });

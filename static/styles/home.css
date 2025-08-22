@@ -1,8 +1,22 @@
 .home-page{
+    height: fit-content;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+}
+
+.hp-menu{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: fit-content;
+    scrollbar-width: none;
+}
+.home-page::-webkit-scrollbar{
+    width: 0;
+    height: 0;
 }
 
 .home-page h2{
@@ -13,8 +27,20 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 2em;
-    margin-block: 5em;
+    margin-top: 3em;
+}
+
+.hp-checkbox{
+    margin-block: 2em;
+
+}
+
+@media screen and (max-width: 768px){
+    .hp-config{
+        flex-direction: column;
+    }
 }
 
 #hp-location-toggle{
@@ -26,8 +52,64 @@
     background-color: rgb(0, 0, 80);
 }
 
+.EASY{
+    background-color: rgb(0, 120, 0);
+    border: solid 2px rgb(0, 120, 0);
+}
+.EASY:focus,
+.EASY:hover{
+    background-color: rgb(0, 80, 0);
+}
+.MEDIUM{
+    background-color: rgb(120, 120, 0);
+    border: solid 2px rgb(120, 120, 0);
+}
+.MEDIUM:focus,
+.MEDIUM:hover{
+    background-color: rgb(80, 80, 0);
+}
+.HARD{
+    background-color: rgb(120, 75, 0);
+    border: solid 2px rgb(120, 75, 0);
+}
+.HARD:focus,
+.HARD:hover{
+    background-color: rgb(80, 50, 0);
+}
+.HARDER{
+    background-color: rgb(120, 0, 0);
+    border: solid 2px rgb(120, 0, 0);
+}
+.HARDER:focus,
+.HARDER:hover{
+    background-color: rgb(80, 0, 0);
+}
+.HARDEST{
+    background-color: rgb(40, 0, 0);
+    border: solid 2px rgb(40, 0, 0);
+}
+.HARDEST:focus,
+.HARDEST:hover{
+    background-color: rgb(20, 0, 0);
+}
+.IMPOSSIBLE{
+    background-color: rgb(10, 10, 10);
+    border: solid 2px rgb(10, 10, 10);
+}
+.IMPOSSIBLE:focus,
+.IMPOSSIBLE:hover{
+    background-color: rgb(0, 0, 0);
+}
+.DEFAULT{
+    background-color: rgb(0, 0, 120);
+    border: solid 2px rgb(0, 0, 120);
+}
+.DEFAULT:focus,
+.DEFAULT:hover{
+    background-color: rgb(0, 0, 80);
+}
+
 .hp-toggle{
-    position: relative;
     height: 3em;
     width: 15em;
 
@@ -38,65 +120,46 @@
     justify-content: center;
 
     transition: all .3s ease;
+    position: relative;
 }
 
 .hp-toggle:hover,
 .hp-toggle:focus{
-    scale: 1.1;
+    transform: scale(1.1);
 }
 
-.EASY{
-    background-color: rgb(0, 120, 0);
-    border: solid 2px rgb(0, 120, 0);
-}
-.EASY:focus,
-.EASY:hover{
-    background-color: rgb(0, 80, 0);
-}
-.NORMAL{
-    background-color: rgb(0, 0, 120);
-    border: solid 2px rgb(0, 0, 120);
-}
-.NORMAL:focus,
-.NORMAL:hover{
-    background-color: rgb(0, 0, 80);
-}
-.HARD{
-    background-color: rgb(120, 0, 0);
-    border: solid 2px rgb(120, 0, 0);
-}
-.HARD:focus,
-.HARD:hover{
-    background-color: rgb(80, 0, 0);
-}
-.VERYHARD{
-    background-color: rgb(0, 0, 0);
-    border: solid 2px rgb(0, 0, 0);
-}
-.VERYHARD:focus,
-.VERYHARD:hover{
-    background-color: rgb(0, 0, 0);
+.hp-toggle-cont{
+    position: relative;
+    isolation: isolate;
 }
 
-.hp-toggle::after{
+.hp-toggle-cont::before{
     content: 'scroll...';
+
     position: absolute;
     z-index: -1;
+    pointer-events: none;
+
     font-size: 1.3ch;
     height: 10px;
     width: 15px;
     top: 1em;
     left: 1em;
-    visibility: hidden;
+
     color: var(--font-color-hover);
     transition: all .3s ease;
 }
 
-.hp-toggle:hover::after,
-.hp-toggle:focus::after{
+@media screen and (max-width: 768px){
+    .hp-toggle-cont::before{
+        content: 'tap...';
+    }
+}
+
+.hp-toggle-cont:hover::before,
+.hp-toggle-cont:focus::before{
     top: -2em;
     left: 1em;
-    visibility: visible;
 }
 
 
@@ -106,10 +169,63 @@
 }
 
 #hp-btn{
-    margin-top: 2em;
     height: 4em;
     width: 8em;
     font-size: 2ch;
     padding: 0;
 }
+
+.leaderboard{
+    text-align: center;
+    height: fit-content;
+    margin-block: 100svh;
+}
+
+.lb-scoreboard-cont{
+    display: flex;
+    flex-direction: row;
+    gap: 2em;
+}
+
+@media screen and (max-width: 768px){
+    .lb-scoreboard-cont{
+        flex-direction: column;
+    }
+}
+
+.hp-scroll-down{
+    writing-mode: vertical-lr;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: .5em;
+    transform: translate(0, -50%);
+
+    color: var(--font-color-hover);
+}
+@media screen and (min-width: 768px){
+    .hp-scroll-down{
+        top: 50%;
+    }
+}
+
+@media screen and (max-width: 768px){
+    .hp-scroll-down{
+        bottom: 0;
+    }
+}
+
+.hp-scroll-down .icon{
+    transform: rotate(90deg);
+    -webkit-filter: invert(90%);
+    filter: invert(90%);
+    animation: stretch-vert 2s infinite ease-in-out;
+}
+
+.hp-scroll-down:not(.icon):hover{
+    animation: wobble .5s linear infinite;
+    transform-origin: 50% 25%;
+}
+
 

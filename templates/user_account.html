@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="user-account-page pc-only">
+        <h2>{{ user.username[0].upper() + user.username[1:] }}</h2>
+                
+        <div class="uap-flex-sections">
+        <section class="uap-suggestion-sec">
+            <h3> Your Suggestions </h3>
+            <ul class="suggestions">
+            {% for suggestion, votes, id in suggestions %}
+                <li class="suggestion card">
+                    <div class="suggestion-text"> {{ suggestion }} </div>
+                    <!--<div class="uap-suggestion-votes"> {{ votes }} </div> -->
+                    <form method="post" action="{{url_for('delete_suggestion', next=_this)}}">
+                        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="hidden" name="id" value="{{id}}">
+                        <button type="submit" class="delete-btn card-delete-btn no-grow">DELETE</button>
+                    </form>
+                </li>
+            {% endfor %}
+            </ul>
+            <a class="btn user" href="{{url_for('suggestion')}}">ADD SUGGESTION</a>
+        </section>
+        <section class="uap-highscores-sec">
+            <h3> Your Highscores </h3>
+            <table class="uap-scoretable">
+                <tr>
+                    <th> Difficulty </th>
+                    <th> Highscore </th>
+                    <th> Perfect Streak </th>
+                </tr>
+                {% for score, perfect_streak, difficulty in highscores %}
+                <tr class="uap-highscore">
+                    {% if not difficulty %}
+                    <td class="uap-highscore-difficulty DEFAULT">
+                        All Photos
+                    </td>
+                    <td class="uap-highscore-score"> {{score}} </td>
+                    <td class="uap-highscore-streak"> {{perfect_streak}} </td>
+                    {% else %}
+                    <td class="{{difficulty}} uap-highscore-difficulty">
+                        {{ difficulty[0] + difficulty[1:].lower() }}
+                    </td>
+                    <td class="uap-highscore-score"> {{ score }} </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        </section>
+        </div>
+        <div class="uap-btn-cont">
+            <a class="btn user uap-logout-btn" href="{{url_for('user_logout')}}">LOGOUT</a>
+            <a class="uap-delete-btn delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+        </div>
+    </div>
+    <div class="mobile-only hidden uap-mobile-sec">
+        <span>You need to log in on a computer to see scores and suggestions.</span>
+        <div class="uap-btn-mobile-cont">
+            <a class="btn user uap-logout-btn" href="{{url_for('user_logout')}}">LOGOUT</a>
+            <a class="uap-delete-btn-mobile delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+        </div>
+    </div>
+{% endblock %}
+
+

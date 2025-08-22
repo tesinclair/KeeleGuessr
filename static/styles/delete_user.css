@@ -1,0 +1,7 @@
+.delete-user{
+    display: flex;
+    flex-direction: column;
+    justiify-content: center;
+    align-items: center;
+}
+

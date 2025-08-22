@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="delete-user">
+    <h2>Delete User</h2>
+    <p>Confirm your username to leave forever</p>
+    <form autocomplete="off" method="post">
+        <input type="hidden" autocomplete="false" style="display:none;">
+        <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+      <div class="uname" id="uname-div">
+        <input class="login-input" id="uname-input" name="username" required>
+      </div>
+      <button class="delete-btn" type="submit">DELETE</button>
+    </form>
+  </div>
+<script>
+    const uname = document.getElementById("uname-input");
+    uname.addEventListener('input', () =>{
+        if (uname.value == ''){
+            uname.classList.remove('bad-username');
+            uname.classList.remove('good-username');
+            return;
+        }
+        if (uname.value === "{{session.user_username}}"){
+            uname.classList.remove('bad-username');
+            uname.classList.add('good-username');
+        }else{
+            uname.classList.remove('good-username');
+            uname.classList.add('bad-username');
+        }
+    });
+</script>
+{% endblock %}
+

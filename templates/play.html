@@ -2,12 +2,13 @@
 {% block content %}
 <section class="game">
     <div class="scores">
-        <span id = "curr-score" class="current-score"> {{ session.current_score }} </span>
-        {% if session.user_logged_in %}
-        <span id = "highscore" class="highscore"> {{ session.user_highscore }} </span>
-        {% endif %}
+        <span id="curr-score" class="current-score"> {{ session.current_score }} </span>
+        <div id="current-streak" class="current-streak hidden"> </div>
     </div>
     <div class="photo">
+        {% if session.get('show_all_photos') %}
+        <span class="difficulty-text-play"> {{ difficulty }} </span>
+        {% endif %}
         <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" alt="Photo isn't available now, please try again later.">
     </div>
     <div class="guess-zone">
@@ -15,11 +16,94 @@
         <button id="submitGuess">GUESS</button>
         <div class="result-cont">
             <div id="resultArea"></div>
-            <a class="btn user hidden" id="next-btn" href="{{url_for('play')}}">NEXT</a>
+            <a class="btn user hidden" id="next-btn" href="{{url_for('inc_photo_index')}}">NEXT</a>
         </div>
     </div>
 </section>
 <script>
+    isPhone = (window.innerWidth < 768);
+    const photoEl = document.querySelector('.photo');
+    photoEl.addEventListener('click', () => {
+        if (isPhone){
+            photoEl.classList.toggle('fullscreen-picture'); 
+            document.getElementById('map').classList.toggle('hidden');
+            document.querySelector('.difficulty-text-play').classList.toggle('hidden');
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        isPhone = window.innerWidth < 768;
+    });
+
+    window.addEventListener('load', async () => {
+        {% if session.current_streak %}
+        const currentStreak = {{session.current_streak}};
+        {% else %}
+        const currentStreak = 0;
+        {% endif %}
+
+        const streakColors = {
+            0: '#f8fafc',
+            1: '#e2e8f0',
+            2: '#16a34a',
+            3: '#22c55e',
+            4: '#84cc16',
+            5: '#eab308',
+            6: '#f59e0b',
+            7: '#f97316',
+            8: '#ea580c',
+            9: '#dc2626',
+            10: '#ef4444',
+            11: '#b91c1c',
+            12: '#991b1b',
+            13: '#7f1d1d',
+            14: '#450a0a',
+            15: '#1c0505'
+        };
+
+        const currentStreakEl = document.getElementById('current-streak');
+        const game = document.querySelector('.game');
+
+        let streakElLock = null;
+            
+        if ((getComputedStyle(currentStreakEl).color != streakColors[0]) && (currentStreak == 0)){
+            // TODO: make this work
+            streakElLock = new Promise(resolve => {
+                currentStreakEl.innerHTML = "Streak Lost";
+                currentStreakEl.classList.add('streak-lost');
+                setTimeout(()=>{
+                    currentStreakEl.classList.remove('streak-lost');
+                    streakElLock = null;
+                    resolve();
+                }, 1000);
+            });
+        }
+
+        if (streakElLock){
+            await streakElLock;
+        }
+        game.style.setProperty('--streak-color', streakColors[currentStreak]);
+
+        if (isPhone){
+            currentStreakEl.classList.remove('hidden');
+            currentStreakEl.innerHTML = currentStreak;
+
+            setTimeout(() => {
+                currentStreakEl.classList.add('hidden');
+            }, 500);
+
+            return;
+        }
+
+        if (currentStreak){
+            currentStreakEl.classList.remove('hidden');
+            currentStreakEl.innerHTML = currentStreak;
+        }else{
+            currentStreakEl.classList.add('hidden');
+            currentStreakEl.innerHTML = "";
+        }
+
+    });
 
     const currScore = document.getElementById('curr-score');
     const highscore = document.getElementById('highscore');
@@ -77,6 +161,7 @@
       }
         // Probably don't question this it took a lot of thought to get
         const payload = { 
+            csrf_token: "{{ csrf_token() }}",
             photo_id: photoId, 
             guess_lat: guessLatLng.lat, 
             guess_lng: guessLatLng.lng, 
@@ -115,11 +200,6 @@
 
       if (j.points >= 5000){
           updateScore(currScore, j.current_score);
-          {% if session.user_logged_in %}
-            if (j.highscore != 0){
-                updateScore(highscore, j.highscore);
-            }
-          {% endif %}
       }
 
       document.getElementById('next-btn').classList.remove('hidden');
