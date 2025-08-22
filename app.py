@@ -200,17 +200,18 @@ def update_highscore():
         s.add(a); s.commit(); s.close()
         return session.get('current_score'), session.get('current_streak')
     
-    ret = []
-    if highscore.highscore < session.get('current_score'):
-        highscore.highscore = session.get('current_score')
-        ret.append(session.get('current_score'))
-    else:
-        ret.append(highscore.highscore) 
-    if highscore.perfect_streak < session.get('current_streak'):
-        highscore.perfect_streak = session.get('current_streak')
-        ret.append(session.get('current_streak'))
-    else:
-        ret.append(highscore.perfect_streak)
+    ret = [0, 0]
+    if session.get('current_score') and session.get('current_streak'):
+        if highscore.highscore < session.get('current_score'):
+            highscore.highscore = session.get('current_score')
+            ret.append(session.get('current_score'))
+        else:
+            ret.append(highscore.highscore) 
+        if highscore.perfect_streak < session.get('current_streak'):
+            highscore.perfect_streak = session.get('current_streak')
+            ret.append(session.get('current_streak'))
+        else:
+            ret.append(highscore.perfect_streak)
 
     s.commit(); s.close()
 
