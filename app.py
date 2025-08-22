@@ -306,6 +306,11 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2*math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
+# ------ Context handlers -------
+@app.context_processor
+def inject_current_url():
+    return {'_this': request.full_path or '/'}
+
 # --- CLI helper via flask commands ---
 @app.cli.command("create-admin")
 @cli_login_required
@@ -563,7 +568,7 @@ def end_of_session():
 @login_required
 def admin_suggestions():
     s = db_session()
-    suggestions = [[x, x.user.username, x.id] for x in s.execute(select(Suggestion).options(selectinload(Suggestion.user))).scalars().all()]
+    suggestions = [[x.content, x.user.username, x.id] for x in s.execute(select(Suggestion).options(selectinload(Suggestion.user))).scalars().all()]
     s.close()
     return render_template('admin_suggestions.html', suggestions=suggestions)
 

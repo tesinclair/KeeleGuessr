@@ -25,7 +25,7 @@
     justify-content: center;
     align-items: center;
 }
-.uap-suggestions{
+.suggestions{
     display: flex;
     flex-direction: row;
     gap: 2em;
@@ -39,7 +39,7 @@
     margin: 0;
 }
 
-.uap-suggestion{
+.suggestion{
     flex: 0 0 auto;
     height: 20svh;
     width: 10svw;

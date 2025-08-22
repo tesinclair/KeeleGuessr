@@ -6,13 +6,12 @@
         <div class="uap-flex-sections">
         <section class="uap-suggestion-sec">
             <h3> Your Suggestions </h3>
-            <ul class="uap-suggestions">
+            <ul class="suggestions">
             {% for suggestion, votes, id in suggestions %}
-                <li class="uap-suggestion card">
-                    <div class="uap-suggestion-text"> {{ suggestion }} </div>
-                    <div class="uap-suggestion-votes"> {{ votes }} 
-                    </div>
-                    <form method="post" action="{{url_for('delete_suggestion')}}">
+                <li class="suggestion card">
+                    <div class="suggestion-text"> {{ suggestion }} </div>
+                    <!--<div class="uap-suggestion-votes"> {{ votes }} </div> -->
+                    <form method="post" action="{{url_for('delete_suggestion', next=_this)}}">
                         <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
                         <input type="hidden" name="_method" value="DELETE">
                         <input type="hidden" name="id" value="{{id}}">
