@@ -159,7 +159,7 @@
         }
         // TODO: add same effect for phone users
         document.addEventListener('wheel', (e) => {
-            e.preventDefault();
+            if (locationToggle.matches(":hover") || difficultyToggle.matches(":hover")) return;
 
             let direction = getDirection(e.wheelDelta);
 
@@ -171,7 +171,7 @@
                 document.querySelector('.hp-scroll-down').classList.add('hidden');
             }
 
-        }, {passive: false});
+        });
 
         let locationScrollPos = -1;
         let difficultyScrollPos = -1;
