@@ -200,17 +200,18 @@ def update_highscore():
         s.add(a); s.commit(); s.close()
         return session.get('current_score'), session.get('current_streak')
     
-    ret = []
-    if highscore.highscore < session.get('current_score'):
-        highscore.highscore = session.get('current_score')
-        ret.append(session.get('current_score'))
-    else:
-        ret.append(highscore.highscore) 
-    if highscore.perfect_streak < session.get('current_streak'):
-        highscore.perfect_streak = session.get('current_streak')
-        ret.append(session.get('current_streak'))
-    else:
-        ret.append(highscore.perfect_streak)
+    ret = [0, 0]
+    if session.get('current_score') and session.get('current_streak'):
+        if highscore.highscore < session.get('current_score'):
+            highscore.highscore = session.get('current_score')
+            ret.append(session.get('current_score'))
+        else:
+            ret.append(highscore.highscore) 
+        if highscore.perfect_streak < session.get('current_streak'):
+            highscore.perfect_streak = session.get('current_streak')
+            ret.append(session.get('current_streak'))
+        else:
+            ret.append(highscore.perfect_streak)
 
     s.commit(); s.close()
 
@@ -230,15 +231,16 @@ def get_leaderboard_data(diff, loc, limit=5):
     s = db_session()
 
     highscores = s.query(Highscore)\
-                        .options(joinedload(Highscore.user))\
-                        .filter_by(location=loc, difficulty_id=diff)\
-                        .order_by(Highscore.highscore.asc())\
-                        .limit(limit)\
-                        .all()
+                         .options(joinedload(Highscore.user))\
+                         .filter_by(location=loc, difficulty_id=diff)\
+                         .order_by(Highscore.highscore.desc())\
+                         .limit(limit)\
+                         .all()
+
     streaks = s.query(Highscore)\
                         .options(joinedload(Highscore.user))\
                         .filter_by(location=loc, difficulty_id=diff)\
-                        .order_by(Highscore.perfect_streak.asc())\
+                        .order_by(Highscore.perfect_streak.desc())\
                         .limit(limit)\
                         .all()
 
