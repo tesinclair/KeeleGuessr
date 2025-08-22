@@ -1,8 +1,22 @@
 .home-page{
+    height: fit-content;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+}
+
+.hp-menu{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: fit-content;
+    scrollbar-width: none;
+}
+.home-page::-webkit-scrollbar{
+    width: 0;
+    height: 0;
 }
 
 .home-page h2{
@@ -160,4 +174,58 @@
     font-size: 2ch;
     padding: 0;
 }
+
+.leaderboard{
+    text-align: center;
+    height: fit-content;
+    margin-block: 100svh;
+}
+
+.lb-scoreboard-cont{
+    display: flex;
+    flex-direction: row;
+    gap: 2em;
+}
+
+@media screen and (max-width: 768px){
+    .lb-scoreboard-cont{
+        flex-direction: column;
+    }
+}
+
+.hp-scroll-down{
+    writing-mode: vertical-lr;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: .5em;
+    transform: translate(0, -50%);
+
+    color: var(--font-color-hover);
+}
+@media screen and (min-width: 768px){
+    .hp-scroll-down{
+        top: 50%;
+    }
+}
+
+@media screen and (max-width: 768px){
+    .hp-scroll-down{
+        bottom: 0;
+    }
+}
+
+.hp-scroll-down .icon{
+    transform: rotate(90deg);
+    -webkit-filter: invert(90%);
+    filter: invert(90%);
+    animation: stretch-vert 2s infinite ease-in-out;
+}
+
+.hp-scroll-down:not(.icon):hover{
+    animation: wobble .5s linear infinite;
+    transform-origin: 50% 25%;
+}
+
 

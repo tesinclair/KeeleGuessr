@@ -99,12 +99,15 @@
   </body>
 <script>
 
+    let isPhone = (window.innerWidth < 768);
+
     function testMobileWidth(){
-        if (window.innerWidth < 500){
+        if (window.innerWidth < 500){ // not the same as isPhone
             document.querySelector('.nav-header').innerHTML = "K.G.";
         }else{
             document.querySelector('.nav-header').innerHTML = "Keele Guesser";
         }
+        isPhone = (window.innerWidth < 768);
     }
     testMobileWidth();
 
@@ -131,6 +134,29 @@
             flashEl.classList.add('hidden');
         }, 300);
     }
+
+    window.addEventListener("load", () => {
+        if (isPhone){
+            document.querySelectorAll('.pc-only')
+                .forEach((el) => {
+                    el.classList.add('hidden');      
+                });
+            document.querySelectorAll('.mobile-only')
+                .forEach((el) => {
+                    el.classList.remove('hidden');
+                });
+        }else{
+            document.querySelectorAll('.pc-only')
+            .forEach((el) => {
+                el.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.mobile-only')
+                .forEach((el) => {
+                    el.classList.add('hidden');
+                });
+        }
+    });
 </script>
 </html>
 

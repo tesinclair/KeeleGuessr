@@ -4,11 +4,15 @@
     justify-content: space-between;
     margin-inline: 3em;
     margin-block: 1em;
+    position: sticky;
+    top: .5em;
+    z-index: 99;
 }
 .nav a:not(:has(svg)){
     text-decoration: none;
     color: var(--font-color-normal);
     transition: all 0.3s ease;
+    mix-blend-mode: difference;
 }
 .nav a:not(:has(svg)):hover{
     color: var(--font-color-hover);
@@ -26,18 +30,3 @@
     gap: 2em;
     color: var(--font-color-normal);
 }
-
-.icon{
-    -webkit-filter: invert(95%);
-    filter: invert(95%);
-    height: 2rem;
-    width: 2rem;
-    transition: all .3s ease;
-}
-.icon:hover,
-.icon:focus{
-    scale: 1.1; 
-    -webkit-filter: invert(90%);
-    filter: invert(90%);
-}
-

@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-    <div class="user-account-page">
+    <div class="user-account-page pc-only">
         <h2>{{ user.username[0].upper() + user.username[1:] }}</h2>
                 
         <div class="uap-flex-sections">
@@ -47,6 +47,7 @@
                     {% endif %}
                 </tr>
                 {% endfor %}
+            </table>
         </section>
         </div>
         <div class="uap-btn-cont">
@@ -54,6 +55,13 @@
             <a class="uap-delete-btn delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
         </div>
     </div>
-   {% endblock %}
+    <div class="mobile-only hidden uap-mobile-sec">
+        <span>You need to log in on a computer to see scores and suggestions.</span>
+        <div class="uap-btn-mobile-cont">
+            <a class="btn user uap-logout-btn" href="{{url_for('user_logout')}}">LOGOUT</a>
+            <a class="uap-delete-btn-mobile delete-btn" href="{{url_for('user_delete')}}"> DELETE ACCOUNT</a>
+        </div>
+    </div>
+{% endblock %}
 
 

@@ -58,3 +58,22 @@
     justify-content: center;
 }
 
+.uap-mobile-sec{
+    height: 90svh;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding-top: 5em;
+}
+
+.uap-btn-mobile-cont{
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 0;
+    height: fit-content;
+}
+

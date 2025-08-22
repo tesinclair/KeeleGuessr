@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select, ForeignKey
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload, joinedload
 
 import os, datetime, math 
 from PIL import Image
@@ -91,6 +91,7 @@ class Highscore(Base):
     difficulty_name = Column(String(32))
     highscore = Column(Integer, nullable=False, default=0)
     perfect_streak = Column(Integer, nullable=False, default=0)
+    location = Column(Integer, nullable=False, default=DEFAULT_LOCATION)
 
     user = relationship("User", back_populates="highscores")
 
@@ -193,7 +194,8 @@ def update_highscore():
                 difficulty_id=difficulty_id,
                 difficulty_name=difficulty_name,
                 highscore=session.get('current_score'),
-                perfect_streak=session.get('current_streak')
+                perfect_streak=session.get('current_streak'),
+                location=session.get('location')
                 )
         s.add(a); s.commit(); s.close()
         return session.get('current_score'), session.get('current_streak')
@@ -213,6 +215,41 @@ def update_highscore():
     s.commit(); s.close()
 
     return ret
+
+def get_leaderboard_data(diff, loc, limit=5):
+    """
+        diff can be None to get show_all_photos data
+        
+        returns:
+            lb_data:
+                streak: [{'username': ..., 'score': ..., 'order': ...},{...}] max 5
+                highscore: [{'username': ..., 'score': ..., 'order':...},{...}] nax 5
+            
+            order: order is set to be the position of the given element in the list - to preserve order in js fetches
+    """
+    s = db_session()
+
+    highscores = s.query(Highscore)\
+                        .options(joinedload(Highscore.user))\
+                        .filter_by(location=loc, difficulty_id=diff)\
+                        .order_by(Highscore.highscore.asc())\
+                        .limit(limit)\
+                        .all()
+    streaks = s.query(Highscore)\
+                        .options(joinedload(Highscore.user))\
+                        .filter_by(location=loc, difficulty_id=diff)\
+                        .order_by(Highscore.perfect_streak.asc())\
+                        .limit(limit)\
+                        .all()
+
+    s.close()
+
+    data = {
+            'streak': [{'username': x.user.username, 'score': x.perfect_streak, 'order': streaks.index(x) + 1} for x in streaks],
+            'highscore': [{'username': x.user.username, 'score': x.highscore, 'order': highscores.index(x) + 1} for x in highscores]
+    }
+
+    return data
 
 def cli_login_required(fn):
     from functools import wraps
@@ -301,6 +338,7 @@ def cli_show_admins():
     print()
     s.close()
 
+
 # --- Routes ---
 @app.route('/')
 def index():
@@ -308,7 +346,7 @@ def index():
 
 @app.route('/home')
 def home():
-    if session.get('user_logged_in'):
+    if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
             flash("You should not be logged in as a deleted user", "danger")
             return redirect(url_for('user_logout'))
@@ -316,6 +354,7 @@ def home():
         user = s.query(User).filter_by(username=session.get('user_username')).first()
         if not user:
             return redirect(url_for('user_logout'))
+
     return render_template('home.html')
 
 @app.route('/user/delete', methods=['GET', 'POST'])
@@ -458,6 +497,10 @@ def play():
     s.close()
 
     return render_template('play.html', photo=photo, difficulty=difficulty)
+
+@app.route('/no_photos', methods=['GET'])
+def no_photos():
+    return render_template('no_photos.html');
 
 @app.route('/user', methods=['GET'])
 @user_login_required
@@ -652,6 +695,27 @@ def user_create():
         except ValueError as e:
             flash('Failed to create account. Username probably taken.', 'danger')
     return render_template('create_user.html')
+
+@app.route('/get/leaderboard/<int:difficulty>/<int:location>/<int:show_all_photos>', methods=['GET'])
+def get_leaderboard(difficulty, location, show_all_photos):
+    if show_all_photos not in [0, 1]:
+        return jsonify({'error': 'Bad show_all_photos value'}), 400
+
+    if show_all_photos == 1:
+        lb_data = get_leaderboard_data(None, location)
+    else:
+        lb_data = get_leaderboard_data(difficulty, location)
+
+    """
+    lb_data:
+        streak: [{'username': ..., 'score': ...},{...}] max 5
+        highscore: [{'username': ..., 'score': ...},{...}] nax 5
+
+    """
+    return jsonify(lb_data), 200
+
+
+
 
 @app.route('/get/username/<username>')
 def get_username(username):

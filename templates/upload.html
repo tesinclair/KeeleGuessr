@@ -166,12 +166,7 @@
         let locationScrollPos = -1;
         let difficultyScrollPos = -1;
 
-        let numScrolls = 0;
         locationToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 2 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
@@ -186,16 +181,10 @@
                 locations,
                 locations.length
             );
-            numScrolls = ++numScrolls % 2;
-
             locationInput.value = configOpts.location[locationChoice];
         });
 
         difficultyToggle.addEventListener('wheel', (e) => {
-            if (numScrolls % 2 !== 0){
-                numScrolls++;
-                return;
-            }
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
@@ -213,8 +202,6 @@
             
             difficultyToggle.className = "hp-toggle";
             difficultyToggle.classList.add(difficultyChoice);
-
-            numScrolls = ++numScrolls % 2;
 
             difficultyInput.value = configOpts.difficulty[difficultyChoice];
         });

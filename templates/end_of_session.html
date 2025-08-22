@@ -3,10 +3,11 @@
     <div class="no-more-photos">
         <h2>You're Done!</h2>
         <div class="nmp-b1">
-            <p>Sorry! Looks like you've seen all our photos.</p>
-            <p>More coming soon...</p>
+            <p>Your final scores: </p>
+            <p>Score: {{session.current_score}}</p>
+            <p>Highest Streak of Perfect Scores: {{session.highest_streak}}</p>
         </div>
-        <p>Click to reset the photos you've seen (and you score)</p>
+        <p>Click to reset and start a new session!</p>
         <a class="btn user" href="{{url_for('home')}}">RESET</a>
         {% if not session.user_logged_in %}
         <p class="footer"> Psst. You're not logged in, so your highscore will be deleted... create an account or log in to save it!</p>

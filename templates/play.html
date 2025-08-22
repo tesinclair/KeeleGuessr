@@ -21,7 +21,7 @@
     </div>
 </section>
 <script>
-    const isPhone = (window.innerWidth < 768);
+    isPhone = (window.innerWidth < 768);
     const photoEl = document.querySelector('.photo');
     photoEl.addEventListener('click', () => {
         if (isPhone){
@@ -67,6 +67,7 @@
         let streakElLock = null;
             
         if ((getComputedStyle(currentStreakEl).color != streakColors[0]) && (currentStreak == 0)){
+            // TODO: make this work
             streakElLock = new Promise(resolve => {
                 currentStreakEl.innerHTML = "Streak Lost";
                 currentStreakEl.classList.add('streak-lost');
