@@ -80,6 +80,8 @@
     const photoImg = document.getElementById('photo-img');
     const photoUpload = document.getElementById('photo');
 
+    isPhone = (window.innerWidth <= 768);
+
     function showPhoto(file){
         if (!file){
             photoImg.src = "";
@@ -105,19 +107,44 @@
         try{
             const metadata = await exifr.gps(file);
             console.log(metadata);
-            if (metadata){
-                if (marker) map.removeLayer(marker);
-                lat.value = metadata.latitude;
-                lng.value = metadata.longitude;
-                marker = L.marker([lat.value, lng.value]).addTo(map);
-                document.getElementById('ac-validator').classList.remove('hidden');
-            }else{
+            if (metadata) updateMapLocation(metadata.latitude, metadata.longitude);
+            else{
+                err = null;
+                if (isPhone){
+                    err = getPhoneLocation();
+                }
+                if (!err) return;
                 document.getElementById('cm-box').classList.remove('hidden');
             }
         } catch (err){
+            flash("Failed to parse photo", "danger");
             console.error("Failed to parse photo: ", err);
         }
     });
+
+    function updateMapLocation(lat_l, lng_l){
+        if (marker) map.removeLayer(marker);
+
+        lat.value = lat_l;
+        lng.value = lng_l;
+
+        marker = L.marker([lat.value, lng.value]).addTo(map);
+        map.setView([lat_l, lng_l]);
+        document.getElementById('ac-validator').classList.remove('hidden');
+    }
+
+    function getPhoneLocation(){
+        if (!("geolocation" in navigator)){
+            clientFlash("Couldn't get current location: not available", "warning");
+            return true;
+        }
+        
+        navigator.geolocation.getCurrentPosition((pos) => {
+            updateMapLocation(pos.coords.latitude, pos.coords.longitude);
+        });
+
+        return false;
+    }
 
     
     document.getElementById('man-btn').addEventListener('click', (e)=>{
@@ -205,6 +232,47 @@
 
             difficultyInput.value = configOpts.difficulty[difficultyChoice];
         });
+
+        if (isPhone){
+            locationToggle.addEventListener('click', (e) => {
+                direction = DOWN;
+
+                locations = Object.keys(configOpts.location);
+
+                let locationChoice;
+                [locationScrollPos, locationChoice] = scrollObject(
+                    document.getElementById('hp-location-toggle-text'),
+                    direction,
+                    locationScrollPos,
+                    locations,
+                    locations.length
+                );
+                locationInput.value = configOpts.location[locationChoice];
+            });
+
+            difficultyToggle.addEventListener('click', (e) => {
+                direction = DOWN;
+                difficultys = Object.keys(configOpts.difficulty);
+
+                let difficultyChoice;
+                [difficultyScrollPos, difficultyChoice] = scrollObject(
+                    document.getElementById('hp-difficulty-toggle-text'),
+                    direction,
+                    difficultyScrollPos,
+                    difficultys,
+                    difficultys.length
+                );
+                
+                difficultyToggle.className = "hp-toggle";
+                difficultyToggle.classList.add(difficultyChoice);
+
+                difficultyInput.value = configOpts.difficulty[difficultyChoice];
+            });
+
+            if ("geolocation" in navigator){
+            }else{
+            }
+        }
 
 
 </script>
