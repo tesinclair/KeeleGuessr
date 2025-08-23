@@ -404,7 +404,6 @@ def index(subdomain=None):
 
     return redirect(url_for('home'))
 
-
 @app.route('/home')
 def home():
     if session.get('user_logged_in'): # make sure user exists
