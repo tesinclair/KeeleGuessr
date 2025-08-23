@@ -89,14 +89,21 @@
                 const streakUname = streakTable.querySelector('.lb-username');
                 const streakScore = streakTable.querySelector('.lb-score');
 
+                let updated = false;
                 for (const el of tableInfo.streak){
                     if (el.order == (i + 1)){
                         streakUname.innerHTML = el.username;
                         streakScore.innerHTML = el.score;
+                        updated = true;
                         break;
                     }
                 }
-                
+                if (!updated){
+                    streakUname.innerHTML = "---";
+                    streakScore.innerHTML = "0";
+                }
+
+                updated = false;
                 const highscoreTable = document.getElementById(`lb-highscore-data-${i}`);
                 const highscoreUname = highscoreTable.querySelector('.lb-username');
                 const highscoreScore = highscoreTable.querySelector('.lb-score');
@@ -105,8 +112,14 @@
                     if (el.order == (i + 1)){
                         highscoreUname.innerHTML = el.username;
                         highscoreScore.innerHTML = el.score;
+                        updated = true;
                         break;
                     }
+                }
+
+                if (!updated){
+                    highscoreUname.innerHTML = "---";
+                    highscoreScore.innerHTML = "0";
                 }
 
             }
