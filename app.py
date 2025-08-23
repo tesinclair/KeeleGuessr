@@ -393,16 +393,18 @@ def cli_show_admins():
 
 # --- Routes ---
 @app.route('/')
-@app.route('/', subdomain="<subdomain>")
-def index(subdomain=None):
-    if subdomain:
+def index():
+    host = request.host.split(":")[0]
+    domain = host.split(".")
+    if len(domain) > 2:
+        subdomain = domain[0]
         for loc in Location:
             if subdomain.upper() == loc.name:
                 session['location'] = loc
                 session['freeze_location'] = True;
                 break
 
-    return redirect(url_for('home'))
+    return redirect('https://keeleguesser.beer/home') # so much simpler than filtering out the subdomain
 
 @app.route('/home')
 def home():
