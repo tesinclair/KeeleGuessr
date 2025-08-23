@@ -143,7 +143,10 @@
         }, 100);
     });
 
+    let guessed = false;
     map.on('click', function(e){
+        if (guessed) return;
+
         if (guessMarker) { 
             map.removeLayer(guessMarker); 
             guessMarker = null; 
@@ -155,6 +158,7 @@
     });
 
     document.getElementById('submitGuess').addEventListener('click', async () => {
+      if (guessed) return;
       if (!guessLatLng) { 
         alert('Please click the map to place your guess'); 
         return; 
@@ -188,6 +192,7 @@
         return; 
       }
       
+      guessed = true; // after error processing
       const trueLatLng = [j.true_lat, j.true_lng];
       L.marker(trueLatLng, {title:'True location'}).addTo(map).bindPopup("Actual location").openPopup();
       map.fitBounds(L.latLngBounds([guessLatLng, trueLatLng]).pad(0.2));
