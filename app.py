@@ -24,6 +24,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
 SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
 DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
+SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "localhost:5000"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -49,12 +50,14 @@ MAX_SUGGESTIONS = 100 # per user
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = SECRET_KEY
+app.config['SERVER_NAME'] = SERVER_NAME
 
 csrf = CSRFProtect(app)
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
 
 # --- Difficultyls ---
 class Admin(Base):
@@ -167,7 +170,7 @@ def delete_user():
 
 def update_highscore():
     s = db_session()
-    
+
     user = s.query(User).filter_by(username=session.get('user_username')).first()
     if not user:
         print("DEBUG: in update_highscore with no user")
@@ -199,14 +202,14 @@ def update_highscore():
                 )
         s.add(a); s.commit(); s.close()
         return session.get('current_score'), session.get('current_streak')
-    
+
     ret = [0, 0]
     if session.get('current_score') and session.get('current_streak'):
         if highscore.highscore < session.get('current_score'):
             highscore.highscore = session.get('current_score')
             ret.append(session.get('current_score'))
         else:
-            ret.append(highscore.highscore) 
+            ret.append(highscore.highscore)
         if highscore.perfect_streak < session.get('current_streak'):
             highscore.perfect_streak = session.get('current_streak')
             ret.append(session.get('current_streak'))
@@ -220,23 +223,22 @@ def update_highscore():
 def get_leaderboard_data(diff, loc, limit=5):
     """
         diff can be None to get show_all_photos data
-        
+
         returns:
             lb_data:
                 streak: [{'username': ..., 'score': ..., 'order': ...},{...}] max 5
                 highscore: [{'username': ..., 'score': ..., 'order':...},{...}] nax 5
-            
+
             order: order is set to be the position of the given element in the list - to preserve order in js fetches
     """
     s = db_session()
 
     highscores = s.query(Highscore)\
-                         .options(joinedload(Highscore.user))\
-                         .filter_by(location=loc, difficulty_id=diff)\
-                         .order_by(Highscore.highscore.desc())\
-                         .limit(limit)\
-                         .all()
-
+                        .options(joinedload(Highscore.user))\
+                        .filter_by(location=loc, difficulty_id=diff)\
+                        .order_by(Highscore.highscore.desc())\
+                        .limit(limit)\
+                        .all()
     streaks = s.query(Highscore)\
                         .options(joinedload(Highscore.user))\
                         .filter_by(location=loc, difficulty_id=diff)\
@@ -297,6 +299,20 @@ def user_login_required(fn):
         return redirect(url_for('user_login', next=request.path))
     return wrapper
 
+def change_password(username, password):
+    if not username or not password:
+        raise ValueError("Username or Password not provided");
+
+    s = db_session()
+    user = s.query(User).filter_by(username=username).first()
+
+    if not user:
+        s.close()
+        raise ValueError("User doesn't exist")
+
+    user.password_hash = generate_password_hash(password)
+    s.commit(); s.close()
+
 # Haversine distance in meters
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000  # meters
@@ -333,6 +349,35 @@ def cli_create_admin():
     except Exception as e:
         print("Error:", e)
 
+@app.cli.command("change-pass")
+@cli_login_required
+def cli_change_pass():
+    import getpass
+    username = input("Username: ").strip()
+    if not username:
+        print("Username Required")
+        return
+
+    s = db_session()
+    user = s.query(User).filter_by(username=username).first()
+    s.close()
+
+    if not user:
+        print("User doesn't exist")
+        return
+
+    password = getpass.getpass("Password: ")
+    password2 = getpass.getpass("Repeat: ")
+    if password != password2:
+        print("Passwords don't match")
+        return
+
+    try:
+        change_password(username, password)
+        print("Password changed")
+    except Exception as e:
+        print("Error: ", e)
+
 @app.cli.command("show-admins")
 @cli_login_required
 def cli_show_admins():
@@ -348,8 +393,17 @@ def cli_show_admins():
 
 # --- Routes ---
 @app.route('/')
-def index():
+@app.route('/', subdomain="<subdomain>")
+def index(subdomain=None):
+    if subdomain:
+        for loc in Location:
+            if subdomain.upper() == loc.name:
+                session['location'] = loc
+                session['freeze_location'] = True;
+                break
+
     return redirect(url_for('home'))
+
 
 @app.route('/home')
 def home():
@@ -376,15 +430,15 @@ def user_delete():
             return redirect(url_for('user_delete'))
 
     return render_template('delete_user.html')
-    
+
 @app.route('/suggestion/delete/', methods=['POST', 'DELETE'])
 def delete_suggestion():
     if request.form.get('_method') != "DELETE":
-        flash("Bad Method")
+        flash("An error on our end occurred. Try again later.", "danger")
         return redirect(url_for('account'))
     s = db_session()
     user = s.query(User).filter_by(username=session.get('user_username')).first()
-    if not user:
+    if not user and not session.get('admin_logged_in'):
         flash("An error occurred. Account not found.", "danger")
         return redirect(url_for('home'))
 
@@ -416,8 +470,13 @@ def get_config_opts():
         "location": {},
         "difficulty": {}
             }
-    for loc in Location:
-        data["location"][loc.name] = loc 
+
+    if not session.get('freeze_location'):
+        for loc in Location:
+            data["location"][loc.name] = loc
+    else:
+        data["location"]["Location Set"] = DEFAULT_LOCATION
+
     for difficulty in Difficulty:
         data["difficulty"][difficulty.name] = difficulty
 
@@ -442,11 +501,13 @@ def session_config(location, difficulty, show_all_photos):
         session['current_streak'] = 0
         session['current_photo_index'] = 0
         session.pop('photo_list', None)
-    session['location'] = location
+
+    if session.get('freeze_location'):
+        session['location'] = location
     session['difficulty'] = difficulty
     session['show_all_photos'] = show_all_photos
     for loc in Location:
-        if loc == location: 
+        if loc == location:
             session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
             break
 
@@ -472,7 +533,7 @@ def play():
                         .order_by(func.random())
                         .limit(MAX_PHOTOS)
                         .all()]
-        else: 
+        else:
             session['photo_list'] = [x[0] for x in\
                     s.query(Photo.id)
                         .filter_by(location=session.get('location'), difficulty=session.get('difficulty'))
@@ -490,7 +551,7 @@ def play():
         s.close()
         return redirect(url_for('end_of_session'))
 
-    photo = s.query(Photo).filter_by(id=session.get('photo_list')[session.get('current_photo_index')]).first()    
+    photo = s.query(Photo).filter_by(id=session.get('photo_list')[session.get('current_photo_index')]).first()
 
     if not photo:
         flash("An error has occurred, please try again later", "danger")
@@ -534,7 +595,7 @@ def suggestion():
         return redirect(url_for('user_login'))
 
     s = db_session()
-    can_submit = False 
+    can_submit = False
 
     user_id = s.query(User.id).filter_by(username=session.get('user_username')).scalar()
     if not user_id:
@@ -543,7 +604,7 @@ def suggestion():
         return redirect(url_for('user_login'))
 
     if s.query(Suggestion).filter_by(user_id=user_id).count() < MAX_SUGGESTIONS:
-        can_submit = True 
+        can_submit = True
 
     s.close()
 
@@ -697,7 +758,7 @@ def user_create():
             flash('Account Created', 'success')
             session['user_logged_in'] = True
             session['user_username'] = username
-            update_highscore()            
+            update_highscore()
             return redirect(url_for('home'))
         except ValueError as e:
             flash('Failed to create account. Username probably taken.', 'danger')
@@ -731,7 +792,7 @@ def get_username(username):
     s.close()
     if user:
         return jsonify({
-            'isUser': True 
+            'isUser': True
         }), 200
     else:
         return jsonify({
@@ -780,7 +841,7 @@ def admin():
             loc = DEFAULT_LOCATION
             diff = DEFAULT_DIFFICULTY
         elif not loc:
-            flash("Using default location: " + DEFAULT_LOCATION.name[0] + DEFAULT_LOCATION.name[1:].lower(), "info")
+            flash("Using default location: " + DEFAULT_LOCATION.name[0] + LOCATION.name[1:].lower(), "info")
             loc = DEFAULT_LOCATION
         elif not diff:
             flash("Using default difficulty: " + DEFAULT_DIFFICULTY.name.lower(), "info")
@@ -867,9 +928,3 @@ def not_found(e):
 @app.route("/favicon.ico")
 def serve_favicon():
     return send_from_directory(app.static_folder, 'favicon.ico')
-
-# --- Run (if executed directly) ---
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
