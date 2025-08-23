@@ -113,11 +113,17 @@
     color: var(--font-color-normal);
 }
 
+/* leave the importants here, want to make sure nothing ever fucks with the fullscreen function */
 .fullscreen-picture{
     position: absolute;
     top: 0;
     right: 0;
     width: 100svw !important;
+    height: 100svh !important;
+    display: block !important;
+}
+
+.game:has(.fullscreen-picture){
     height: 100svh !important;
 }
 
