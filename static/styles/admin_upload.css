@@ -11,6 +11,12 @@
     .uf-image-map{
         flex-direction: column;
     }
+
+    /* I know this is probably know necessary if I do some faffing... */
+    #upload-map{
+        height: 400px !important;
+        width: 400px !important;
+    }
 }
 
 .uf-image-map input::file-selector-button{
