@@ -71,7 +71,6 @@ class Photo(Base):
     __tablename__ = 'photos'
     id = Column(Integer, primary_key=True)
     filename = Column(String(255), nullable=False)
-    caption = Column(String(255))
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     uploaded_at = Column(DateTime, default=func.now())
@@ -116,6 +115,34 @@ def db_session():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
+
+def upload_img(file, lat, lng, loc, diff):
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # add timestamp to filename to avoid collisions
+        filename = f"{int(datetime.datetime.utcnow().timestamp())}_{os.path.splitext(filename)[0]}"
+        filename_full = filename + ".jpeg"
+        tmp_file = os.path.join(app.config['UPLOAD_FOLDER'], filename + "_upload")
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename_full)
+        file.save(tmp_file)
+        # optional: resize/validate
+
+        try:
+            with Image.open(tmp_file) as img:
+                img.save(path, format="JPEG")
+        finally:
+            if os.path.exists(tmp_file):
+                os.remove(tmp_file)
+
+        s = db_session()
+        p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=int(loc), difficulty=int(diff))
+        s.add(p); s.commit(); s.close()
+        flash('Photo uploaded and saved.', 'success')
+        return True
+    else:
+        flash('Invalid file type', 'danger')
+        return False
+
 
 def create_admin(username, password):
     s = db_session()
@@ -314,6 +341,19 @@ def change_password(username, password):
     user.password_hash = generate_password_hash(password)
     s.commit(); s.close()
 
+def test_admin_creds(username, password):
+    if not username or not password:
+        return False
+
+    s = db_session()
+    admin = s.query(Admin).filter_by(username=username).first()
+    s.close()
+
+    if admin and check_password_hash(admin.password_hash, password):
+        return True
+    else:
+        return False
+
 # Haversine distance in meters
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000  # meters
@@ -424,6 +464,38 @@ def home():
             return redirect(url_for('user_logout'))
 
     return render_template('home.html')
+
+@app.route('/admin/autoupload', methods=['POST'])
+@csrf.exempt
+def admin_auto_upload():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    lat = float(request.form.get("lat", 0))
+    lng = float(request.form.get("lng", 0))
+    difficulty = request.form.get("difficulty")
+    location = request.form.get("location")
+
+    if not username or not password or not lat or not lng:
+        return jsonify({"error": "Required arguments not provided"}), 400
+
+    if not test_admin_creds(username, password):
+        return jsonify({"error": "Dubious Credentials"}), 401
+
+    try:
+        diff = Difficulty[difficulty]
+        loc = Location[location]
+    except KeyError: 
+        return jsonify({"error": "Invalid Location or Difficulty"}), 400
+
+    file = request.files['image']
+
+    if file is None or file.filename == '':
+        return jsonify({"error": "No image provided"}), 400
+
+    if not upload_img(file, lat, lng, loc, diff):
+        return jsonify({"error": "Img upload failed"}), 500
+
+    return jsonify({"success": "Successfully uploaded img"}), 200
 
 @app.route('/user/delete', methods=['GET', 'POST'])
 def user_delete():
@@ -862,34 +934,15 @@ def admin():
             return redirect(request.url)
 
         file = request.files['photo']
-        if file.filename == '':
+        if file is None or file.filename == '':
             flash('No selected file', 'danger')
             return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            # add timestamp to filename to avoid collisions
-            filename = f"{int(datetime.datetime.utcnow().timestamp())}_{os.path.splitext(filename)[0]}"
-            filename_full = filename + ".jpeg"
-            tmp_file = os.path.join(app.config['UPLOAD_FOLDER'], filename + "_upload")
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename_full)
-            file.save(tmp_file)
-            # optional: resize/validate
 
-            try:
-                with Image.open(tmp_file) as img:
-                    img.save(path, format="JPEG")
-            finally:
-                if os.path.exists(tmp_file):
-                    os.remove(tmp_file)
-
-            s = db_session()
-            p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=int(loc), difficulty=int(diff))
-            s.add(p); s.commit(); s.close()
-            flash('Photo uploaded and saved.', 'success')
-            return redirect(url_for('admin'))
-        else:
+        if not upload_img(file, lat, lng, loc, diff):
             flash('Invalid file type', 'danger')
             return redirect(request.url)
+
+        return redirect(url_for('admin'))
     # GET
     return render_template('upload.html')
 
