@@ -157,7 +157,10 @@
                 return;
             }
             
-            configOpts.location = opts.location
+            configOpts.location = opts.location;
+            if (Object.keys(configOpts.location).length == 1){
+                document.getElementById('hp-location-toggle-text').innerHTML = Object.keys(configOpts.location)[0];
+            }
             configOpts.difficulty = Object.fromEntries(
                 Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
                 );
@@ -195,6 +198,7 @@
             if (direction == 0) return;
 
             locations = Object.keys(configOpts.location);
+            if (locations.length <= 1) return;
 
             [locationScrollPos, locationChoice] = scrollObject(
                 document.getElementById('hp-location-toggle-text'),
@@ -211,8 +215,9 @@
         }, {passive: false});
 
         locationToggle.addEventListener('touchstart', () => {
-
+            
             locations = Object.keys(configOpts.location);
+            if (locations.length <= 1) return;
 
             [locationScrollPos, locationChoice] = scrollObject(
                 document.getElementById('hp-location-toggle-text'),

@@ -24,7 +24,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
 SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
 DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
-SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "localhost:5000"
+COOKIE_DOMAIN = os.environ.get('KG_COOKIE_DOMAIN') or ".keeleguesser.local:5000"
+SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "keeleguesser.local:5000"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -50,7 +51,7 @@ MAX_SUGGESTIONS = 100 # per user
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = SECRET_KEY
-app.config['SERVER_NAME'] = SERVER_NAME
+app.config['SESSION_COOKIE_DOMAIN'] = COOKIE_DOMAIN
 
 csrf = CSRFProtect(app)
 
@@ -394,20 +395,25 @@ def cli_show_admins():
 # --- Routes ---
 @app.route('/')
 def index():
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
     host = request.host.split(":")[0]
     domain = host.split(".")
-    if len(domain) > 2:
+    if len(domain) > 2 and domain[0] != "www":
         subdomain = domain[0]
         for loc in Location:
             if subdomain.upper() == loc.name:
                 session['location'] = loc
-                session['freeze_location'] = True;
+                session['freeze_location'] = True
+                session['location_text'] = loc.name
+                flash("Location: " + loc.name[0] + loc.name[1:].lower(), "info")
                 break
 
-    return redirect('https://keeleguesser.beer/home') # so much simpler than filtering out the subdomain
+        redirect_dest = request.host.replace(subdomain + ".", '')
+        return redirect(f'http://{redirect_dest}') # so much simpler than filtering out the subdomain
 
-@app.route('/home')
-def home():
     if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
             flash("You should not be logged in as a deleted user", "danger")
@@ -472,11 +478,11 @@ def get_config_opts():
         "difficulty": {}
             }
 
-    if not session.get('freeze_location'):
+    if session.get('freeze_location') and not session.get('admin_logged_in'):
+        data["location"][session.get('location_text')] = session.get('location')
+    else:
         for loc in Location:
             data["location"][loc.name] = loc
-    else:
-        data["location"]["Location Set"] = DEFAULT_LOCATION
 
     for difficulty in Difficulty:
         data["difficulty"][difficulty.name] = difficulty
@@ -503,10 +509,12 @@ def session_config(location, difficulty, show_all_photos):
         session['current_photo_index'] = 0
         session.pop('photo_list', None)
 
-    if session.get('freeze_location'):
-        session['location'] = location
     session['difficulty'] = difficulty
     session['show_all_photos'] = show_all_photos
+
+    if session.get('freeze_location'):
+        session['location'] = location
+
     for loc in Location:
         if loc == location:
             session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
