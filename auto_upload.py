@@ -36,7 +36,7 @@ def get_exif_data(image_path):
 locations = ["KEELE", "ELSTEAD"]
 difficulties = ["EASY", "MEDIUM", "HARD", "HARDER", "HARDEST", "IMPOSSIBLE"]
 
-dev = conf.get('dev') or (True if input("Development? (y): ") == "y" else False)
+dev = True if (conf.get('dev') or input("Development? (y): ")) == "y" else False
 folder_path = os.path.expanduser(
     conf.get('folder_path') or input("Path from home (~): ")
 )
