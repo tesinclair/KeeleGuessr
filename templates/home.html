@@ -77,8 +77,6 @@
             updateLBTable();
         });
 
-
-
         async function updateLBTable(){
             const url = "{{ url_for('get_leaderboard', difficulty=0, location=0, show_all_photos=0) }}"
             tableInfo = await getInfo(url
@@ -124,14 +122,6 @@
 
             }
         }
-
-        document.getElementById('hp-checkbox').addEventListener('change', (e)=>{
-            if (e.target.value){
-                showAllPhotos = 1;
-            }else{
-                showAllPhotos = 0;
-            }
-        });
 
         const UP = 1;
         const DOWN = -1;
