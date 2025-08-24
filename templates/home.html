@@ -160,6 +160,7 @@
             configOpts.location = opts.location;
             if (Object.keys(configOpts.location).length == 1){
                 document.getElementById('hp-location-toggle-text').innerHTML = Object.keys(configOpts.location)[0];
+                locationInput.value = Object.values(configOpts.location)[0];
             }
             configOpts.difficulty = Object.fromEntries(
                 Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
