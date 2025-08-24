@@ -7,9 +7,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload, joinedload
 
-import os, datetime, math 
+import os, datetime, math, sys
 from PIL import Image
 from enum import IntEnum
+from dotenv import dotenv_values
 
 # ----- Todo list ------
 # TODO:
@@ -22,10 +23,19 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
-SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
-DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
-COOKIE_DOMAIN = os.environ.get('KG_COOKIE_DOMAIN') or ".keeleguesser.local:5000"
-SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "keeleguesser.local:5000"
+
+KG_CONF = dotenv_values("../keeleguesser.env")
+
+SECRET_KEY = KG_CONF['KG_FLASK_SECRET']
+DELETED_USER_PASS = KG_CONF['KG_DELETED_USER_PASS']
+COOKIE_DOMAIN = KG_CONF['KG_COOKIE_DOMAIN']
+SERVER_NAME = KG_CONF['KG_SERVER_NAME']
+
+if not SECRET_KEY or \
+   not DELETED_USER_PASS or \
+   not COOKIE_DOMAIN or \
+   not SERVER_NAME:
+       sys.exit(1)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -412,7 +422,7 @@ def home():
                 break
 
         redirect_dest = request.host.replace(subdomain + ".", '')
-        return redirect(f'http://{redirect_dest}') # so much simpler than filtering out the subdomain
+        return redirect(f'https://{redirect_dest}') # so much simpler than filtering out the subdomain
 
     if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
