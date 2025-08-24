@@ -4,3 +4,7 @@ SQLAlchemy
 Flask-Migrate
 Werkzeug
 Pillow
+
+requests
+piexif
+python-dotenv

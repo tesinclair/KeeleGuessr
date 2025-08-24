@@ -12,6 +12,6 @@ static/uploads/*
 
 *.sqlite3
 
-.env
+*.env
 
 hotreload.sh
