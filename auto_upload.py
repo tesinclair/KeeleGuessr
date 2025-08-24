@@ -49,7 +49,7 @@ if difficulty not in difficulties or location not in locations:
     print("Difficulty or Location wrong...")
     sys.exit(1)
 
-if dev:
+if dev in [True, "True", 1, "1"]:
     url = "http://keeleguesser.local:5000/admin/autoupload"
 else:
     url = "https://keeleguesser.beer/admin/autoupload"
