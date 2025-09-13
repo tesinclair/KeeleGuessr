@@ -15,3 +15,4 @@ static/uploads/*
 *.env
 
 hotreload.sh
+auto_upload.py

@@ -36,7 +36,7 @@ def get_exif_data(image_path):
 locations = ["KEELE", "ELSTEAD"]
 difficulties = ["EASY", "MEDIUM", "HARD", "HARDER", "HARDEST", "IMPOSSIBLE"]
 
-dev = True if (conf.get('dev') or input("Development? (y): ")) == "y" else False
+dev = False
 folder_path = os.path.expanduser(
     conf.get('folder_path') or input("Path from home (~): ")
 )
@@ -49,10 +49,7 @@ if difficulty not in difficulties or location not in locations:
     print("Difficulty or Location wrong...")
     sys.exit(1)
 
-if dev in [True, "True", 1, "1"]:
-    url = "http://keeleguesser.local:5000/admin/autoupload"
-else:
-    url = "https://keeleguesser.beer/admin/autoupload"
+url = "https://keeleguesser.beer/admin/autoupload"
 
 for filename in os.listdir(folder_path):
     file_path = os.path.join(folder_path, filename)
@@ -77,7 +74,7 @@ for filename in os.listdir(folder_path):
 
     with open(file_path, "rb") as f:
         file = {"image": f}
-        res = requests.post(url, data=data, files=file, verify=(not dev))
+        res = requests.post(url, data=data, files=file, verify=True)
 
     if res.status_code == 200:
         print(f"SUCCESS: Image: {filename} uploaded Successfully")

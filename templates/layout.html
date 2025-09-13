@@ -45,11 +45,49 @@
                 {% if request.path == url_for('admin') %}
                 <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
+                <a href="{{ url_for('edit_photos') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                         viewBox="0 0 48 48" fill="none" stroke="black" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+
+                          <g transform="rotate(-8 12 22)">
+                            <rect x="6" y="10" width="16" height="24" rx="2" ry="2" fill="white"/>
+                            <circle cx="12" cy="16" r="2"/>
+                            <path d="M8 28l6-6 6 6z"/>
+                          </g>
+                          <g transform="rotate(-2 24 22)">
+                            <rect x="12" y="8" width="16" height="26" rx="2" ry="2" fill="white"/>
+                            <circle cx="18" cy="14" r="2"/>
+                            <path d="M14 30l6-6 6 6z"/>
+                          </g>
+                          <g transform="rotate(6 34 22)">
+                            <rect x="18" y="10" width="16" height="24" rx="2" ry="2" fill="white"/>
+                            <circle cx="24" cy="16" r="2"/>
+                            <path d="M20 28l6-6 6 6z"/>
+                          </g>
+                    </svg>
+                </a>
                 {% elif request.path == url_for('admin_suggestions') %}
-                <a href="{{ url_for('admin') }}">Admin</a>
+                <a href="{{ url_for('admin') }}">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg"
+                         viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 20h16" />
+                      <path d="M12 16V4" />
+                      <path d="M7 9l5-5 5 5" />
+                    </svg>
+                </a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
                 {% else %}
-                <a href="{{ url_for('admin') }}">Admin</a>
+                <a href="{{ url_for('admin') }}">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg"
+                         viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 20h16" />
+                      <path d="M12 16V4" />
+                      <path d="M7 9l5-5 5 5" />
+                    </svg>
+                </a>
                 <a href="{{ url_for('admin_suggestions') }}">Suggestions</a>
                 <a href="{{ url_for('admin_logout') }}">Logout</a>
                 {% endif %}

@@ -13,8 +13,8 @@
             </div>
             <div class="hp-toggle-cont">
                 <div class="hp-toggle" id="hp-location-toggle">
-                    <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
-                    <input type="hidden" name="location" id="location" value="1">
+                    <span class="hp-toggle-text" id="hp-location-toggle-text"> {{ session.get('location_text') }} </span>
+                    <input type="hidden" name="location" id="location" value="{{ session.get('location') }}">
                 </div>
             </div>
         </div>
@@ -164,6 +164,7 @@
             const sessioncfgUrl = "{{url_for('session_config', location=0, difficulty=1, show_all_photos=0)}}";
             window.location.href = sessioncfgUrl.replace("/0/1/0", `/${locationInput.value}/${difficultyInput.value}/${showAllPhotos}`);
         }
+        /*
         // TODO: add same effect for phone users
         document.addEventListener('wheel', (e) => {
             if (locationToggle.matches(":hover") || difficultyToggle.matches(":hover")) return;
@@ -179,11 +180,14 @@
             }
 
         });
+        */
 
         let locationScrollPos = -1;
         let difficultyScrollPos = -1;
 
         locationToggle.addEventListener('wheel', (e) => {
+            return;
+            // TODO: decide whether to keep or discard.
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
             if (direction == 0) return;
