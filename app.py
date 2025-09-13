@@ -24,8 +24,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
 SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
 DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
-COOKIE_DOMAIN = os.environ.get('KG_COOKIE_DOMAIN') or ".keeleguesser.local:5000"
-SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "keeleguesser.local:5000"
+COOKIE_DOMAIN = os.environ.get('KG_COOKIE_DOMAIN') or ".keeleguesser.local"
+SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "keeleguesser.local"
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -115,6 +115,24 @@ def db_session():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
+
+def delete_img(id):
+    s = db_session()
+    photo = s.query(Photo).get(photo_id)
+    if not photo:
+        s.close()
+        raise ValueError(f'Photo {id} does not exist.')
+
+    # delete file
+    path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+    s.delete(photo); s.commit(); s.close()
+    return True
+
 
 def upload_img(file, lat, lng, loc, diff):
     if file and allowed_file(file.filename):
@@ -441,7 +459,7 @@ def index():
 def home():
     host = request.host.split(":")[0]
     domain = host.split(".")
-    if len(domain) > 2 and domain[0] != "www":
+    if len(domain) > 2 and not domain[0].isdigit():
         subdomain = domain[0]
         for loc in Location:
             if subdomain.upper() == loc.name:
@@ -452,7 +470,13 @@ def home():
                 break
 
         redirect_dest = request.host.replace(subdomain + ".", '')
-        return redirect(f'http://{redirect_dest}') # so much simpler than filtering out the subdomain
+        return redirect(f'http://{redirect_dest}')
+
+    if session.get('location') is None:
+        session['location'] = Location.KEELE
+        session['freeze_location'] = True
+        session['location_text'] = 'KEELE'
+        flash("Location: Keele", "info")
 
     if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
@@ -463,7 +487,40 @@ def home():
         if not user:
             return redirect(url_for('user_logout'))
 
+    print(session.get('location'), session.get('freeze_location'), session.get('location_text'))
+
     return render_template('home.html')
+
+@app.route('/admin/edit', methods=['POST', 'GET', 'DELETE'])
+@login_required
+def admin_edit():
+    if not session.get('admin_logged_in'):
+        flash("GET OUT!", "danger")
+        return redirect(url_for('home'))
+    
+    if request.method == "POST":
+        if request.form.get('_method') == "DELETE":
+            id = request.form.get('img_id');
+            if not id:
+                flash("You need to provide an image ID", "danger")
+                return jsonify({'error': 'No image id'}), 400
+
+            try:
+                if not delete_image(id):
+                    flash("An error occurred.", "danger")
+                    return jsonify({'error': 'An unexpected error occurred'}), 500
+                flash("Image deleted successfully", "success")
+                return jsonify({'success': f'Deleted image with id: {id}.'}), 200
+
+            except ValueError as e:
+                flash("Your request was denied.", "danger")
+                return jsonify({'error': f'Failed to delete image: {e}'}), 400
+
+        flash("Editing isn't implemented yet!", "danger")
+        return jsonify({'error': 'Not Implemented'}), 501
+
+    return render_template('admin_edit.html')
+
 
 @app.route('/admin/autoupload', methods=['POST'])
 @csrf.exempt
@@ -946,26 +1003,10 @@ def admin():
     # GET
     return render_template('upload.html')
 
-@app.route('/admin/delete/<int:photo_id>', methods=['POST'])
-@login_required
-def admin_delete(photo_id):
-    s = db_session()
-    photo = s.query(Photo).get(photo_id)
-    if not photo:
-        s.close()
-        flash('Not found', 'danger')
-        return redirect(url_for('admin'))
-    # delete file
-    path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
-    try:
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception:
-        pass
-    s.delete(photo)
-    s.commit()
-    s.close()
-    flash('Deleted', 'info')
+@app.route('/admin/edit-photos', methods=["GET", "POST"])
+def edit_photos():
+    if request.method == "POST":
+        return jsonify({'err': 'not implemented'}), 518
     return redirect(url_for('admin'))
 
 # route to serve uploaded images (static does that already but here's explicit)
