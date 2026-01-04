@@ -4,7 +4,7 @@ SQLAlchemy
 Flask-Migrate
 Werkzeug
 Pillow
-
+gunicorn
 requests
 piexif
 python-dotenv

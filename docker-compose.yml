@@ -1,0 +1,15 @@
+services:
+  keeleguesser:
+    image: blyk/keeleguesser:latest
+    ports: 
+      - "5000:5000"
+    init: true
+    environment:
+      - FLASK_DEBUG=0
+      - APP_ENV=production
+      - FLASK_SECRET=your-secret-here
+      - COOKIE_DOMAIN=.your-domain.com
+      - SERVER_NAME=your-domain.com
+      - DB_PATH=/app/data/keeleguesser.db
+    volumes:
+      - ./save_data:/app/data

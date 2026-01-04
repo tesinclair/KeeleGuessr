@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, func, select, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, selectinload, joinedload
 
-import os, datetime, math 
+import os, datetime, math, secrets
 from PIL import Image
 from enum import IntEnum
 
@@ -21,11 +21,29 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-DATABASE_URL = 'sqlite:///' + os.path.join(BASE_DIR, 'keeleguesser.db')
-SECRET_KEY = os.environ.get('KG_FLASK_SECRET') or 'change-this-secret-in-prod'
-DELETED_USER_PASS = os.environ.get('KG_DELETED_USER_PASS') or "change-this-in-prod"
-COOKIE_DOMAIN = os.environ.get('KG_COOKIE_DOMAIN') or ".keeleguesser.local"
-SERVER_NAME = os.environ.get('KG_SERVER_NAME') or "keeleguesser.local"
+ENV = os.environ.get('APP_ENV')
+db_path = os.environ.get('DB_PATH')
+COOKIE_DOMAIN = os.environ.get('COOKIE_DOMAIN') or ".keeleguesser.local"
+SERVER_NAME = os.environ.get('SERVER_NAME') or "keeleguesser.local"
+SECRET_KEY = os.environ.get('FLASK_SECRET')
+
+if ENV == "production":
+    if SECRET_KEY is None or COOKIE_DOMAIN == ".keeleguesser.local" or SERVER_NAME == "keeleguesser.local" or db_path is None:
+        raise ValueError("SECRET_KEY, COOKIE_DOMAIN, DB_PATH and SERVER_NAME must ALL be set in production mode")
+    print("Running in Production mode.")
+
+elif ENV == "local":
+    if SECRET_KEY is None:
+        SECRET_KEY = "flask_secret"
+    if db_path is None:
+        db_path = "/app/data/keeleguesser.db"
+    print("Running in local development mode")
+
+else:
+    raise ValueError("APP_ENV must be set.")
+
+DATABASE_URL = 'sqlite:///' + db_path
+DELETED_USER_PASS = secrets.token_urlsafe(15)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -43,6 +61,7 @@ class Difficulty(IntEnum):
     IMPOSSIBLE = 6
 
 DEFAULT_LOCATION = Location.ELSTEAD
+DEFAULT_LOCATION_TEXT = "ELSTEAD"
 DEFAULT_DIFFICULTY = Difficulty.MEDIUM
 MAX_PHOTOS = 15 # in session
 MAX_SUGGESTIONS = 100 # per user
@@ -465,18 +484,18 @@ def home():
             if subdomain.upper() == loc.name:
                 session['location'] = loc
                 session['freeze_location'] = True
-                session['location_text'] = loc.name
-                flash("Location: " + loc.name[0] + loc.name[1:].lower(), "info")
+                session['location_text'] = loc.name[0] + loc.name[1:].lower()
+                flash("Location: " + session.get('location_text'), "info")
                 break
 
         redirect_dest = request.host.replace(subdomain + ".", '')
         return redirect(f'http://{redirect_dest}')
 
     if session.get('location') is None:
-        session['location'] = Location.KEELE
+        session['location'] = DEFAULT_LOCATION
         session['freeze_location'] = True
-        session['location_text'] = 'KEELE'
-        flash("Location: Keele", "info")
+        session['location_text'] = DEFAULT_LOCATION_TEXT[0] + DEFAULT_LOCATION_TEXT[1:].lower()
+        flash(f"Location: {session.get('location_text')}", "info")
 
     if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
@@ -979,7 +998,7 @@ def admin():
             loc = DEFAULT_LOCATION
             diff = DEFAULT_DIFFICULTY
         elif not loc:
-            flash("Using default location: " + DEFAULT_LOCATION.name[0] + LOCATION.name[1:].lower(), "info")
+            flash("Using default location: " + DEFAULT_LOCATION.name[0] + DEFAULT_LOCATION.name[1:].lower(), "info")
             loc = DEFAULT_LOCATION
         elif not diff:
             flash("Using default difficulty: " + DEFAULT_DIFFICULTY.name.lower(), "info")
@@ -1031,3 +1050,6 @@ def not_found(e):
 @app.route("/favicon.ico")
 def serve_favicon():
     return send_from_directory(app.static_folder, 'favicon.ico')
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

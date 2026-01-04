@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 
 .env/
+venv/
 
 instance/
 
@@ -16,3 +17,5 @@ static/uploads/*
 
 hotreload.sh
 auto_upload.py
+
+docker-compose.override.yml

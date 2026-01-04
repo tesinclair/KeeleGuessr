@@ -1,0 +1,8 @@
+.git/
+.gitignore
+venv/
+.env
+.env/
+auto_upload.py
+/__pycache__/
+README.md
