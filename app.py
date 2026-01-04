@@ -26,6 +26,9 @@ db_path = os.environ.get('DB_PATH')
 COOKIE_DOMAIN = os.environ.get('COOKIE_DOMAIN') or ".keeleguesser.local"
 SERVER_NAME = os.environ.get('SERVER_NAME') or "keeleguesser.local"
 SECRET_KEY = os.environ.get('FLASK_SECRET')
+LOCATION = os.environ.get('LOCATION') or "Keele"
+BORDER_COORDS_TMP = os.environ.get('BORDER_COORDS') or "53.007968,-2.282653,52.988923,-2.252456"
+BORDER_COORDS = BORDER_COORDS_TMP.split(",")
 
 if ENV == "production":
     if SECRET_KEY is None or COOKIE_DOMAIN == ".keeleguesser.local" or SERVER_NAME == "keeleguesser.local" or db_path is None:
@@ -48,10 +51,6 @@ DELETED_USER_PASS = secrets.token_urlsafe(15)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # ------- Global `macros` ------------
-class Location(IntEnum):
-    KEELE = 1
-    ELSTEAD = 2
-
 class Difficulty(IntEnum):
     EASY = 1
     MEDIUM = 2
@@ -60,8 +59,6 @@ class Difficulty(IntEnum):
     HARDEST = 5
     IMPOSSIBLE = 6
 
-DEFAULT_LOCATION = Location.ELSTEAD
-DEFAULT_LOCATION_TEXT = "ELSTEAD"
 DEFAULT_DIFFICULTY = Difficulty.MEDIUM
 MAX_PHOTOS = 15 # in session
 MAX_SUGGESTIONS = 100 # per user
@@ -93,7 +90,6 @@ class Photo(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     uploaded_at = Column(DateTime, default=func.now())
-    location = Column(Integer, nullable=False)
     difficulty = Column(Integer, nullable=False)
 
 class User(Base):
@@ -113,7 +109,6 @@ class Highscore(Base):
     difficulty_name = Column(String(32))
     highscore = Column(Integer, nullable=False, default=0)
     perfect_streak = Column(Integer, nullable=False, default=0)
-    location = Column(Integer, nullable=False, default=DEFAULT_LOCATION)
 
     user = relationship("User", back_populates="highscores")
 
@@ -153,7 +148,7 @@ def delete_img(id):
     return True
 
 
-def upload_img(file, lat, lng, loc, diff):
+def upload_img(file, lat, lng, diff):
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         # add timestamp to filename to avoid collisions
@@ -172,7 +167,7 @@ def upload_img(file, lat, lng, loc, diff):
                 os.remove(tmp_file)
 
         s = db_session()
-        p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), location=int(loc), difficulty=int(diff))
+        p = Photo(filename=filename_full, lat=float(lat), lng=float(lng), difficulty=int(diff))
         s.add(p); s.commit(); s.close()
         flash('Photo uploaded and saved.', 'success')
         return True
@@ -263,7 +258,6 @@ def update_highscore():
                 difficulty_name=difficulty_name,
                 highscore=session.get('current_score'),
                 perfect_streak=session.get('current_streak'),
-                location=session.get('location')
                 )
         s.add(a); s.commit(); s.close()
         return session.get('current_score'), session.get('current_streak')
@@ -285,7 +279,7 @@ def update_highscore():
 
     return ret
 
-def get_leaderboard_data(diff, loc, limit=5):
+def get_leaderboard_data(diff, limit=5):
     """
         diff can be None to get show_all_photos data
 
@@ -300,13 +294,13 @@ def get_leaderboard_data(diff, loc, limit=5):
 
     highscores = s.query(Highscore)\
                         .options(joinedload(Highscore.user))\
-                        .filter_by(location=loc, difficulty_id=diff)\
+                        .filter_by(difficulty_id=diff)\
                         .order_by(Highscore.highscore.desc())\
                         .limit(limit)\
                         .all()
     streaks = s.query(Highscore)\
                         .options(joinedload(Highscore.user))\
-                        .filter_by(location=loc, difficulty_id=diff)\
+                        .filter_by(difficulty_id=diff)\
                         .order_by(Highscore.perfect_streak.desc())\
                         .limit(limit)\
                         .all()
@@ -476,26 +470,14 @@ def index():
 
 @app.route('/home')
 def home():
-    host = request.host.split(":")[0]
-    domain = host.split(".")
-    if len(domain) > 2 and not domain[0].isdigit():
-        subdomain = domain[0]
-        for loc in Location:
-            if subdomain.upper() == loc.name:
-                session['location'] = loc
-                session['freeze_location'] = True
-                session['location_text'] = loc.name[0] + loc.name[1:].lower()
-                flash("Location: " + session.get('location_text'), "info")
-                break
-
-        redirect_dest = request.host.replace(subdomain + ".", '')
-        return redirect(f'http://{redirect_dest}')
-
     if session.get('location') is None:
-        session['location'] = DEFAULT_LOCATION
-        session['freeze_location'] = True
-        session['location_text'] = DEFAULT_LOCATION_TEXT[0] + DEFAULT_LOCATION_TEXT[1:].lower()
-        flash(f"Location: {session.get('location_text')}", "info")
+        session['location'] = LOCATION
+        flash(f"Location: {session.get('location')}", "info")
+        
+        session['box_top_left'] = [float(BORDER_COORDS[0]), float(BORDER_COORDS[1])]
+        session['box_bottom_right'] = [float(BORDER_COORDS[2]), float(BORDER_COORDS[3])]
+        session['box_start'] = [(session.get('box_top_left')[0] + session.get('box_bottom_right')[0]) / 2,
+                                (session.get('box_top_left')[1] + session.get('box_bottom_right')[1]) / 2]
 
     if session.get('user_logged_in'): # make sure user exists
         if session.get('user_username') == "deleted_user":
@@ -505,8 +487,6 @@ def home():
         user = s.query(User).filter_by(username=session.get('user_username')).first()
         if not user:
             return redirect(url_for('user_logout'))
-
-    print(session.get('location'), session.get('freeze_location'), session.get('location_text'))
 
     return render_template('home.html')
 
@@ -549,7 +529,6 @@ def admin_auto_upload():
     lat = float(request.form.get("lat", 0))
     lng = float(request.form.get("lng", 0))
     difficulty = request.form.get("difficulty")
-    location = request.form.get("location")
 
     if not username or not password or not lat or not lng:
         return jsonify({"error": "Required arguments not provided"}), 400
@@ -559,16 +538,15 @@ def admin_auto_upload():
 
     try:
         diff = Difficulty[difficulty]
-        loc = Location[location]
     except KeyError: 
-        return jsonify({"error": "Invalid Location or Difficulty"}), 400
+        return jsonify({"error": "Invalid Difficulty"}), 400
 
     file = request.files['image']
 
     if file is None or file.filename == '':
         return jsonify({"error": "No image provided"}), 400
 
-    if not upload_img(file, lat, lng, loc, diff):
+    if not upload_img(file, lat, lng, diff):
         return jsonify({"error": "Img upload failed"}), 500
 
     return jsonify({"success": "Successfully uploaded img"}), 200
@@ -622,26 +600,16 @@ def admin_poll():
 @app.route('/get/configopts', methods=['GET'])
 def get_config_opts():
     data = {
-        "location": {},
         "difficulty": {}
             }
-
-    if session.get('freeze_location') and not session.get('admin_logged_in'):
-        data["location"][session.get('location_text')] = session.get('location')
-    else:
-        for loc in Location:
-            data["location"][loc.name] = loc
 
     for difficulty in Difficulty:
         data["difficulty"][difficulty.name] = difficulty
 
     return jsonify(data), 200
 
-@app.route('/sessioncfg/<int:location>/<int:difficulty>/<int:show_all_photos>')
-def session_config(location, difficulty, show_all_photos):
-    if location not in Location:
-        flash("Please select a valid location", "warning")
-        return redirect(url_for('home'))
+@app.route('/sessioncfg/<int:difficulty>/<int:show_all_photos>')
+def session_config(difficulty, show_all_photos):
     if difficulty not in Difficulty:
         flash("Please select a valid difficulty", "warning")
         return redirect(url_for('home'))
@@ -650,7 +618,7 @@ def session_config(location, difficulty, show_all_photos):
         return redirect(url_for('home'))
 
     # on first login neither are set so always true
-    if session.get('location') != location or session.get('difficulty') != difficulty or \
+    if session.get('difficulty') != difficulty or \
             session.get('current_photo_index') >= len(session.get('photo_list')):
         session['current_score'] = 0
         session['current_streak'] = 0
@@ -659,14 +627,6 @@ def session_config(location, difficulty, show_all_photos):
 
     session['difficulty'] = difficulty
     session['show_all_photos'] = show_all_photos
-
-    if session.get('freeze_location'):
-        session['location'] = location
-
-    for loc in Location:
-        if loc == location:
-            session['location_text'] = f"{loc.name[0]}{loc.name[1:].lower()}"
-            break
 
     return redirect(url_for('play'))
 
@@ -677,7 +637,7 @@ def inc_photo_index(): # prevent user refresh from updating photo index
 
 @app.route('/play')
 def play():
-    if not session.get('difficulty') and session.get('location'):
+    if session.get('difficulty') is None or session.get('location') is None:
         return redirect(url_for('home'))
     # Randomize selection server-side: pick one random photo
     s = db_session()
@@ -686,14 +646,13 @@ def play():
         if session.get('show_all_photos'):
             session['photo_list'] = [x[0] for x in\
                     s.query(Photo.id)
-                        .filter_by(location=session.get('location'))
                         .order_by(func.random())
                         .limit(MAX_PHOTOS)
                         .all()]
         else:
             session['photo_list'] = [x[0] for x in\
                     s.query(Photo.id)
-                        .filter_by(location=session.get('location'), difficulty=session.get('difficulty'))
+                        .filter_by(difficulty=session.get('difficulty'))
                         .order_by(func.random())
                         .limit(MAX_PHOTOS)
                         .all()]
@@ -921,22 +880,23 @@ def user_create():
             flash('Failed to create account. Username probably taken.', 'danger')
     return render_template('create_user.html')
 
-@app.route('/get/leaderboard/<int:difficulty>/<int:location>/<int:show_all_photos>', methods=['GET'])
-def get_leaderboard(difficulty, location, show_all_photos):
-    if show_all_photos not in [0, 1]:
-        return jsonify({'error': 'Bad show_all_photos value'}), 400
-
-    if show_all_photos == 1:
-        lb_data = get_leaderboard_data(None, location)
-    else:
-        lb_data = get_leaderboard_data(difficulty, location)
-
+@app.route('/get/leaderboard/<int:difficulty>/<int:show_all_photos>', methods=['GET'])
+def get_leaderboard(difficulty, show_all_photos):
     """
     lb_data:
         streak: [{'username': ..., 'score': ...},{...}] max 5
         highscore: [{'username': ..., 'score': ...},{...}] nax 5
 
     """
+
+    if show_all_photos not in [0, 1]:
+        return jsonify({'error': 'Bad show_all_photos value'}), 400
+
+    if show_all_photos == 1:
+        difficulty = None
+
+    lb_data = get_leaderboard_data(difficulty)
+
     return jsonify(lb_data), 200
 
 
@@ -990,23 +950,14 @@ def admin():
 
         lat = request.form.get('lat', type=float)
         lng = request.form.get('lng', type=float)
-        loc = request.form.get('location', type=int)
         diff = request.form.get('difficulty', type=int)
 
-        if (not loc) and (not diff):
-            flash("Using location and difficulty defaults", "info")
-            loc = DEFAULT_LOCATION
+        if not diff:
+            flash("Using difficulty defaults", "info")
             diff = DEFAULT_DIFFICULTY
-        elif not loc:
-            flash("Using default location: " + DEFAULT_LOCATION.name[0] + DEFAULT_LOCATION.name[1:].lower(), "info")
-            loc = DEFAULT_LOCATION
-        elif not diff:
-            flash("Using default difficulty: " + DEFAULT_DIFFICULTY.name.lower(), "info")
-            diff = DEFAULT_DIFFICULTY
-
 
         if not lat or not lng:
-            flash('You must click the map to set the photo location before uploading.', 'danger')
+            flash('You must click the map to set the photo lat and lng before uploading.', 'danger')
             return redirect(request.url)
 
         file = request.files['photo']
@@ -1014,12 +965,12 @@ def admin():
             flash('No selected file', 'danger')
             return redirect(request.url)
 
-        if not upload_img(file, lat, lng, loc, diff):
+        if not upload_img(file, lat, lng, diff):
             flash('Invalid file type', 'danger')
             return redirect(request.url)
 
         return redirect(url_for('admin'))
-    # GET
+
     return render_template('upload.html')
 
 @app.route('/admin/edit-photos', methods=["GET", "POST"])

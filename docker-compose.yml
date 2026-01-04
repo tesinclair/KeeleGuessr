@@ -4,12 +4,17 @@ services:
     ports: 
       - "5000:5000"
     init: true
+    restart: unless-stopped
     environment:
-      - FLASK_DEBUG=0
-      - APP_ENV=production
+      - LOCATION=Your Location Here
+      - BORDER_COORDS=top_left_lat,top_left_lng,bottom_right_lat,bottom_right_lng
       - FLASK_SECRET=your-secret-here
       - COOKIE_DOMAIN=.your-domain.com
       - SERVER_NAME=your-domain.com
+
+      # Shouldn't change these unless you know what you're doing.
       - DB_PATH=/app/data/keeleguesser.db
+      - FLASK_DEBUG=0
+      - APP_ENV=production
     volumes:
       - ./save_data:/app/data

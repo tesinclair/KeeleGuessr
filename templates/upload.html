@@ -30,10 +30,6 @@
             <span class="hp-toggle-text" id="hp-difficulty-toggle-text"> DIFFICULTY </span>
             <input type="hidden" name="difficulty" id="difficulty">
           </div>
-          <div class="hp-toggle EASY" id="hp-location-toggle-admin">
-            <span class="hp-toggle-text" id="hp-location-toggle-text"> LOCATION </span>
-            <input type="hidden" name="location" id="location">
-          </div>
       </div>
       <button id="pu-submit-btn" class="btn admin" type="submit">UPLOAD</button>
     </form>
@@ -156,19 +152,13 @@
     });
 
         const difficultyToggle = document.getElementById('hp-difficulty-toggle');
-        const locationToggle = document.getElementById('hp-location-toggle-admin');
         const difficultyInput = document.getElementById('difficulty');
-        const locationInput = document.getElementById('location');
 
         const UP = 1;
         const DOWN = -1;
 
         // Defaults
         let configOpts = { 
-            location: {
-                KEELE: 1,
-                ELSTEAD: 2
-            },
             difficulty: {
                 EASY: 1,
                 MEDIUM: 2,
@@ -184,33 +174,12 @@
                 return;
             }
             
-            configOpts.location = opts.location
             configOpts.difficulty = Object.fromEntries(
                 Object.entries(opts.difficulty).sort(([,a], [,b]) => a - b)
                 );
         });
 
-        let locationScrollPos = -1;
         let difficultyScrollPos = -1;
-
-        locationToggle.addEventListener('wheel', (e) => {
-            // DOWN is when the hand scrolls down
-            let direction = getDirection(e.wheelDelta);
-            if (direction == 0) return;
-
-            locations = Object.keys(configOpts.location);
-
-            let locationChoice;
-            [locationScrollPos, locationChoice] = scrollObject(
-                document.getElementById('hp-location-toggle-text'),
-                direction,
-                locationScrollPos,
-                locations,
-                locations.length
-            );
-            locationInput.value = configOpts.location[locationChoice];
-        });
-
         difficultyToggle.addEventListener('wheel', (e) => {
             // DOWN is when the hand scrolls down
             let direction = getDirection(e.wheelDelta);
@@ -234,22 +203,6 @@
         });
 
         if (isPhone){
-            locationToggle.addEventListener('click', (e) => {
-                direction = DOWN;
-
-                locations = Object.keys(configOpts.location);
-
-                let locationChoice;
-                [locationScrollPos, locationChoice] = scrollObject(
-                    document.getElementById('hp-location-toggle-text'),
-                    direction,
-                    locationScrollPos,
-                    locations,
-                    locations.length
-                );
-                locationInput.value = configOpts.location[locationChoice];
-            });
-
             difficultyToggle.addEventListener('click', (e) => {
                 direction = DOWN;
                 difficultys = Object.keys(configOpts.difficulty);

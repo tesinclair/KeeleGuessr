@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>KeeleGuessr</title>
+    <title>{{session.get('location')}}Guessr</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}" />
@@ -17,9 +17,9 @@
   <body>
     <nav class="nav">
         {% if session.get('location') and request.path != url_for('play') %}
-        <a class="nav-header" href="{{ url_for('play') }}">Keele Guesser</a>
+        <a class="nav-header" href="{{ url_for('play') }}">{{session.get('location')}} Guesser</a>
         {% else %}
-        <a class="nav-header" href="{{ url_for('home') }}">Keele Guesser</a>
+        <a class="nav-header" href="{{ url_for('home') }}">{{session.get('location')}} Guesser</a>
         {% endif %}
         <div class="nav-list">
             {% if session.get('location') and request.path != url_for('home') %}
@@ -141,9 +141,9 @@
 
     function testMobileWidth(){
         if (window.innerWidth < 500){ // not the same as isPhone
-            document.querySelector('.nav-header').innerHTML = "K.G.";
+            document.querySelector('.nav-header').innerHTML = "{{session.get('location')[0]}}.G.";
         }else{
-            document.querySelector('.nav-header').innerHTML = "Keele Guesser";
+            document.querySelector('.nav-header').innerHTML = "{{session.get('location')}} Guesser";
         }
         isPhone = (window.innerWidth < 768);
     }
