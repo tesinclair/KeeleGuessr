@@ -1,16 +1,29 @@
-# KeeleGuesser25.1
+# KeeleGuesser26
 
-Version 1 (KeeleGuesser25) is now complete.
+KeeleGuesser26 is available to be played [HERE](https://keeleguesser.beer)
 
-KeeleGuesser25 is available to be played [HERE](https://elstead.keeleguesser.beer)
+## Docker
 
-If you need help with anything, or want to ask questions contact me at: support@keeleguesser.beer
+KeeleGuesser26 is also available as a docker image now.
 
-Now that you're done here visit [the WIKI](https://github.com/tesinclair/KeeleGuessr/wiki) to see future plans and info about the game!
+You can find a [template here](https://github.com/tesinclair/KeeleGuessr/blob/master/docker-compose.yml).
+
+Just add your own secret. A secure hex secret can be generated using `openssl rand -hex [string-length]`.
+If you want to run the server in debug mode, then you should set `APP_ENV=local`, and `FLASK_DEBUG=1`.
+And add
+```yaml
+services:
+    keeleguesser:
+        command: python app.py
+        # Rest of config
+    
+```
 
 #### New Features:
-- Now location is dependent on your subdomain. Simply enter <location>.keeleguesser.beer and you will be set to that. You can always go to keeleguesser.beer for a standard session though!
-- Emails can be found for both bug-fixes and support to logged in users.
+- Dockerised. Now you can pull blyk/keeleguesser:latest for AMD64 and ARM64 to run the server yourself.
+- Bug fixes:
+    - No longer see None when no photos are available
+    - 
 
 
 
